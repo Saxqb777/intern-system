@@ -63,10 +63,15 @@ export async function summariesFor(
   const out = new Map<number, Summary>();
   if (userIds.length === 0) return out;
 
+  // Passed as a joined string rather than a JS array: the driver hands an
+  // array over as "[2,3]" and Postgres wants "{2,3}", so an array parameter
+  // fails with "malformed array literal".
+  const ids = userIds.join(",");
+
   const rows = (await sql`
     select user_id, work_date, time_in, time_out, status
     from attendance
-    where user_id = any(${userIds}::int[])
+    where user_id = any(string_to_array(${ids}, ',')::int[])
       and work_date between ${fromDate} and ${toDate}
   `) as {
     user_id: number;
