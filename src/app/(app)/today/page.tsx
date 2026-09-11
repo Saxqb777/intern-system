@@ -109,8 +109,7 @@ export default async function TodayPage() {
           />
 
           <p className="small faint" style={{ marginTop: 8 }}>
-            Your university asks for this on the Agthia sheet. Download it any
-            time, already filled in.
+            For your university. Already filled in.
           </p>
 
           <a

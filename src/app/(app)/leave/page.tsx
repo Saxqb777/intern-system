@@ -33,8 +33,7 @@ export default async function LeavePage() {
         <p className="eyebrow">Days off</p>
         <h1>Leave</h1>
         <p className="lede" style={{ marginTop: 6 }}>
-          Ask before you take a day, and it shows on your sheet as approved
-          leave instead of a blank row your university has to ask about.
+          Approved days show on your sheet as leave, not as a gap.
         </p>
       </header>
 

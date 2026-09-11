@@ -23,10 +23,7 @@ export default async function SignupPage() {
         <div className="authhead">
           <p className="eyebrow">Al Foah office</p>
           <h1>Create your account</h1>
-          <p className="lede small">
-            Interns and supervisors both start here. Your supervisor decides
-            which one you are.
-          </p>
+          <p className="lede small">Use your Agthia email.</p>
         </div>
         <SignupForm domains={domains} />
       </div>

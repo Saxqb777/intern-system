@@ -29,9 +29,7 @@ export default async function LogPage() {
         <p className="eyebrow">Your logbook</p>
         <h1>Work log</h1>
         <p className="lede" style={{ marginTop: 6 }}>
-          What you actually did each day. Most universities ask for this
-          alongside the attendance sheet, and it is a lot easier to write now
-          than to remember in December.
+          What you did each day.
         </p>
       </header>
 

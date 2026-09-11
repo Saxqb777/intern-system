@@ -175,13 +175,6 @@ export function Dial(props: Props) {
     <div className="stack" style={{ maxWidth: 430, marginInline: "auto" }}>
       {error && <p className="note bad">{error}</p>}
 
-      {props.testMode && !props.simulateOutside && (
-        <p className="note warn">
-          Test mode is on, so the office fence is switched off and you can sign
-          in from anywhere. Turn it off before the interns start.
-        </p>
-      )}
-
       <div className="dialwrap">
         <div className="dial">
           <svg className="ring" viewBox="0 0 272 272" aria-hidden="true">

@@ -45,7 +45,6 @@ export function SignupForm({ domains }: { domains: string[] }) {
       <div className="field">
         <label htmlFor="name">Full name</label>
         <input id="name" name="name" required autoComplete="name" />
-        <p className="help">This is the name printed on the university sheet.</p>
       </div>
 
       <div className="field">
@@ -59,11 +58,6 @@ export function SignupForm({ domains }: { domains: string[] }) {
           inputMode="email"
           placeholder={`you@${domains[0]}`}
         />
-        <p className="help">
-          {domains.length === 1
-            ? `Only ${domains[0]} addresses.`
-            : `Accepted: ${domains.join(", ")}.`}
-        </p>
       </div>
 
       <div className="field">
@@ -76,7 +70,7 @@ export function SignupForm({ domains }: { domains: string[] }) {
           minLength={8}
           autoComplete="new-password"
         />
-        <p className="help">At least 8 characters.</p>
+        <p className="help">8 characters or more.</p>
       </div>
 
       <div className="field">
@@ -95,10 +89,7 @@ export function SignupForm({ domains }: { domains: string[] }) {
 
       <div className="field">
         <label htmlFor="university">University</label>
-        <input id="university" name="university" placeholder="UAEU" />
-        <p className="help">
-          Leave blank if you are a supervisor and not an intern.
-        </p>
+        <input id="university" name="university" placeholder="UAEU (interns only)" />
       </div>
 
       <button className="btn solid wide" type="submit" disabled={busy}>
