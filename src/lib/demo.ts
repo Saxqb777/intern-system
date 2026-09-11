@@ -68,6 +68,14 @@ export async function seedDemo(mentorName: string): Promise<SeedResult> {
     internship.start_date > threeWeeksAgo ? internship.start_date : threeWeeksAgo;
   const days = weekdaysBetween(from, today);
 
+  /**
+   * Everything below goes over the wire as one transaction rather than one
+   * statement at a time. Two interns across three weeks is around ninety
+   * writes; sent individually against a database in Singapore that is well
+   * past the function timeout, so the Seed button would die halfway through a
+   * demo and leave the data half built.
+   */
+  const writes = [];
   let written = 0;
 
   for (const [index, userId] of ids.entries()) {
@@ -77,12 +85,12 @@ export async function seedDemo(mentorName: string): Promise<SeedResult> {
       const slot = (dayIndex + index * 2) % 9;
 
       if (slot === 4) {
-        await sql`
+        writes.push(sql`
           insert into attendance (user_id, work_date, status, note, is_demo)
           values (${userId}, ${day}, 'leave', 'University exam', true)
           on conflict (user_id, work_date) do update
             set status = 'leave', note = excluded.note, is_demo = true
-        `;
+        `);
         written++;
         continue;
       }
@@ -91,7 +99,7 @@ export async function seedDemo(mentorName: string): Promise<SeedResult> {
       const outMinute = slot === 7 ? 930 : 1020 + ((dayIndex * 5) % 12); // 15:30 or ~17:00
       const isToday = day === today;
 
-      await sql`
+      writes.push(sql`
         insert into attendance (
           user_id, work_date, time_in, time_out, in_distance, out_distance,
           in_accuracy, out_accuracy, status, is_demo
@@ -106,53 +114,59 @@ export async function seedDemo(mentorName: string): Promise<SeedResult> {
         on conflict (user_id, work_date) do update set
           time_in = excluded.time_in, time_out = excluded.time_out,
           status = 'present', is_demo = true
-      `;
+      `);
       written++;
 
       if (dayIndex % 3 === 0) {
-        await sql`
+        writes.push(sql`
           insert into work_logs (user_id, work_date, body, is_demo)
           values (${userId}, ${day}, ${DEMO_LOGS[dayIndex % DEMO_LOGS.length]}, true)
           on conflict (user_id, work_date) do update
             set body = excluded.body, is_demo = true
-        `;
+        `);
       }
     }
 
-    await sql`
+    writes.push(sql`
       insert into tasks (user_id, title, due_date, created_by, is_demo)
       values
         (${userId}, 'Finish the supplier comparison sheet', ${days[days.length - 1]}, ${userId}, true),
         (${userId}, 'Read the HACCP induction pack', null, ${userId}, true)
-    `;
+    `);
   }
 
   // One of each thing a supervisor has to decide, so the demo shows the queue.
   if (ids.length) {
-    await sql`
+    writes.push(sql`
       insert into override_requests (user_id, work_date, kind, reason, distance, is_demo)
       values (${ids[1] ?? ids[0]}, ${today}, 'in',
               'Working at the Al Saad site today with Khalid, GPS will not lock inside the cold store.',
               4230, true)
-    `;
-    await sql`
+    `);
+    writes.push(sql`
       insert into leave_requests (user_id, from_date, to_date, reason, is_demo)
       values (${ids[0]}, ${addDays(today, 5)}, ${addDays(today, 5)}, 'University exam', true)
-    `;
+    `);
   }
+
+  await sql.transaction(writes);
 
   return { people: ids.length, days: written };
 }
 
 /** Removes everything seeding created, and nothing else. */
 export async function wipeDemo(): Promise<void> {
-  await sql`delete from attendance where is_demo = true`;
-  await sql`delete from work_logs where is_demo = true`;
-  await sql`delete from tasks where is_demo = true`;
-  await sql`delete from override_requests where is_demo = true`;
-  await sql`delete from leave_requests where is_demo = true`;
-  // Users last: the rows above point at them.
-  await sql`delete from users where is_demo = true`;
+  // One transaction, so a failure halfway cannot leave orphaned demo rows
+  // behind for the supervisor to find later. Users go last because
+  // everything above points at them.
+  await sql.transaction([
+    sql`delete from attendance where is_demo = true`,
+    sql`delete from work_logs where is_demo = true`,
+    sql`delete from tasks where is_demo = true`,
+    sql`delete from override_requests where is_demo = true`,
+    sql`delete from leave_requests where is_demo = true`,
+    sql`delete from users where is_demo = true`,
+  ]);
 }
 
 export async function countDemo(): Promise<number> {

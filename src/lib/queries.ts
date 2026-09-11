@@ -46,73 +46,112 @@ export type Summary = {
 
 /**
  * The numbers a university actually asks about, over any range.
- * Expected days are the Monday-to-Friday dates in the range, so a placement
- * that has not finished yet is not counted as full of absences.
+ *
+ * Takes every intern at once. The dashboard shows a summary per person, and
+ * asking per person meant a separate trip to the database for each of them.
+ * One query, then the arithmetic happens here.
+ *
+ * Expected days are the Monday-to-Friday dates in the range capped at today,
+ * so a placement still running is not counted as full of absences.
  */
-export async function summaryFor(
-  userId: number,
+export async function summariesFor(
+  userIds: number[],
   fromDate: string,
   toDate: string,
   dayStart: string
-): Promise<Summary> {
-  const today = officeToday();
-  const cappedTo = toDate < today ? toDate : today;
+): Promise<Map<number, Summary>> {
+  const out = new Map<number, Summary>();
+  if (userIds.length === 0) return out;
 
   const rows = (await sql`
-    select work_date, time_in, time_out, status
+    select user_id, work_date, time_in, time_out, status
     from attendance
-    where user_id = ${userId}
+    where user_id = any(${userIds}::int[])
       and work_date between ${fromDate} and ${toDate}
   `) as {
+    user_id: number;
     work_date: string;
     time_in: string | null;
     time_out: string | null;
     status: string;
   }[];
 
-  const byDate = new Map(rows.map((r) => [r.work_date.slice(0, 10), r]));
+  const today = officeToday();
+  const cappedTo = toDate < today ? toDate : today;
   const expected = weekdaysBetween(fromDate, cappedTo);
-
-  let worked = 0;
-  let leave = 0;
-  let absent = 0;
-  let minutes = 0;
-  let late = 0;
 
   const [lateH, lateM] = dayStart.split(":").map(Number);
   const graceMinutes = lateH * 60 + lateM + 10; // ten minutes of grace
 
-  for (const day of expected) {
-    const row = byDate.get(day);
-    if (!row) {
-      absent++;
-      continue;
+  const byUser = new Map<number, Map<string, (typeof rows)[number]>>();
+  for (const row of rows) {
+    let days = byUser.get(row.user_id);
+    if (!days) {
+      days = new Map();
+      byUser.set(row.user_id, days);
     }
-    if (row.status === "leave") {
-      leave++;
-      continue;
-    }
-    if (!row.time_in) {
-      absent++;
-      continue;
-    }
-
-    worked++;
-    minutes += minutesBetween(row.time_in, row.time_out);
-
-    const arrived = new Date(row.time_in);
-    const gulf = new Date(arrived.getTime() + 4 * 60 * 60_000);
-    if (gulf.getUTCHours() * 60 + gulf.getUTCMinutes() > graceMinutes) late++;
+    days.set(row.work_date.slice(0, 10), row);
   }
 
-  return {
-    worked_days: worked,
-    leave_days: leave,
-    absent_days: absent,
-    minutes,
-    expected_days: expected.length,
-    late_days: late,
-  };
+  for (const userId of userIds) {
+    const days = byUser.get(userId) ?? new Map();
+    let worked = 0;
+    let leave = 0;
+    let absent = 0;
+    let minutes = 0;
+    let late = 0;
+
+    for (const day of expected) {
+      const row = days.get(day);
+      if (!row || (row.status !== "leave" && !row.time_in)) {
+        if (row?.status === "leave") leave++;
+        else absent++;
+        continue;
+      }
+      if (row.status === "leave") {
+        leave++;
+        continue;
+      }
+
+      worked++;
+      minutes += minutesBetween(row.time_in, row.time_out);
+
+      // Gulf Standard Time is UTC+4 all year, so a fixed shift is correct.
+      const gulf = new Date(new Date(row.time_in!).getTime() + 4 * 60 * 60_000);
+      if (gulf.getUTCHours() * 60 + gulf.getUTCMinutes() > graceMinutes) late++;
+    }
+
+    out.set(userId, {
+      worked_days: worked,
+      leave_days: leave,
+      absent_days: absent,
+      minutes,
+      expected_days: expected.length,
+      late_days: late,
+    });
+  }
+
+  return out;
+}
+
+/** One person's numbers. Thin wrapper so single-intern pages read plainly. */
+export async function summaryFor(
+  userId: number,
+  fromDate: string,
+  toDate: string,
+  dayStart: string
+): Promise<Summary> {
+  const all = await summariesFor([userId], fromDate, toDate, dayStart);
+  return (
+    all.get(userId) ?? {
+      worked_days: 0,
+      leave_days: 0,
+      absent_days: 0,
+      minutes: 0,
+      expected_days: 0,
+      late_days: 0,
+    }
+  );
 }
 
 export type PendingWork = {

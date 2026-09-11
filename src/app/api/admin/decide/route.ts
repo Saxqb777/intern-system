@@ -101,18 +101,22 @@ export async function POST(request: Request) {
 
       if (approve) {
         // Mark every working day in the range, so the sheet explains itself.
+        // Sent as one transaction: a fortnight off is ten separate writes, and
+        // half a leave request landing on the sheet is worse than none.
         const days = weekdaysBetween(
           req.from_date.slice(0, 10),
           req.to_date.slice(0, 10)
         );
-        for (const day of days) {
-          await sql`
-            insert into attendance (user_id, work_date, status, note)
-            values (${req.user_id}, ${day}, 'leave', ${req.reason})
-            on conflict (user_id, work_date) do update
-              set status = 'leave', note = excluded.note
-          `;
-        }
+        await sql.transaction(
+          days.map(
+            (day) => sql`
+              insert into attendance (user_id, work_date, status, note)
+              values (${req.user_id}, ${day}, 'leave', ${req.reason})
+              on conflict (user_id, work_date) do update
+                set status = 'leave', note = excluded.note
+            `
+          )
+        );
       }
 
       await sql`

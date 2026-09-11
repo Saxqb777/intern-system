@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
@@ -48,8 +49,14 @@ export async function endSession(): Promise<void> {
   (await cookies()).delete(COOKIE);
 }
 
-/** The signed-in user, or null. Safe to call from anywhere on the server. */
-export async function currentUser(): Promise<User | null> {
+/**
+ * The signed-in user, or null. Safe to call from anywhere on the server.
+ *
+ * Cached for the life of one request. The app layout needs the user to decide
+ * what chrome to draw and every page needs it again to decide what to show,
+ * so without this every authenticated page paid for the same query twice.
+ */
+export const currentUser = cache(async function currentUser(): Promise<User | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
 
@@ -69,7 +76,7 @@ export async function currentUser(): Promise<User | null> {
   `) as User[];
 
   return rows[0] ?? null;
-}
+});
 
 export function isStaff(role: Role): boolean {
   return role === "admin" || role === "superuser";

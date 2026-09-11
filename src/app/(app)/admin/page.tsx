@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser, isStaff } from "@/lib/auth";
 import { getSetting, isTestMode, workdayMinutes } from "@/lib/settings";
-import { internsToday, pendingWork, summaryFor } from "@/lib/queries";
+import { internsToday, pendingWork, summariesFor } from "@/lib/queries";
 import {
   dayLong,
   humanMinutes,
@@ -11,6 +11,7 @@ import {
   officeToday,
   weekOf,
 } from "@/lib/dates";
+import type { Summary } from "@/lib/queries";
 import { DecideButtons } from "@/components/DecideButtons";
 import { RoleButtons } from "@/components/RoleButtons";
 
@@ -31,10 +32,11 @@ export default async function AdminDashboard() {
   ]);
 
   const dayMinutes = workdayMinutes(hours);
-  const summaries = await Promise.all(
-    interns.map((i) =>
-      summaryFor(i.id, internship.start_date, internship.end_date, hours.start)
-    )
+  const summaries = await summariesFor(
+    interns.map((i) => i.id),
+    internship.start_date,
+    internship.end_date,
+    hours.start
   );
 
   const todo =
@@ -88,7 +90,7 @@ export default async function AdminDashboard() {
                 gap: 14,
               }}
             >
-              {interns.map((intern, index) => (
+              {interns.map((intern) => (
                 <article key={intern.id} className="panel">
                   <div className="body stack-s">
                     <div className="row" style={{ gap: 9 }}>
@@ -139,31 +141,7 @@ export default async function AdminDashboard() {
                         : "Nothing recorded today"}
                     </p>
 
-                    <div
-                      className="spread small"
-                      style={{
-                        borderTop: "1px solid var(--rule-soft)",
-                        paddingTop: 10,
-                        marginTop: 4,
-                      }}
-                    >
-                      <span className="faint">Placement so far</span>
-                      <span className="mono">
-                        {summaries[index].worked_days}/
-                        {summaries[index].expected_days} days ·{" "}
-                        {humanMinutes(summaries[index].minutes)}
-                      </span>
-                    </div>
-                    <div className="spread small">
-                      <span className="faint">Late arrivals</span>
-                      <span className="mono">{summaries[index].late_days}</span>
-                    </div>
-                    <div className="spread small">
-                      <span className="faint">Leave / absent</span>
-                      <span className="mono">
-                        {summaries[index].leave_days} / {summaries[index].absent_days}
-                      </span>
-                    </div>
+                    <Placement summary={summaries.get(intern.id)} />
 
                     <Link
                       className="btn tiny"
@@ -250,6 +228,39 @@ export default async function AdminDashboard() {
             </div>
           )}
         </section>
+      </div>
+    </>
+  );
+}
+
+/** The three lines of placement totals under each intern's card. */
+function Placement({ summary }: { summary: Summary | undefined }) {
+  if (!summary) return null;
+  return (
+    <>
+      <div
+        className="spread small"
+        style={{
+          borderTop: "1px solid var(--rule-soft)",
+          paddingTop: 10,
+          marginTop: 4,
+        }}
+      >
+        <span className="faint">Placement so far</span>
+        <span className="mono">
+          {summary.worked_days}/{summary.expected_days} days &middot;{" "}
+          {humanMinutes(summary.minutes)}
+        </span>
+      </div>
+      <div className="spread small">
+        <span className="faint">Late arrivals</span>
+        <span className="mono">{summary.late_days}</span>
+      </div>
+      <div className="spread small">
+        <span className="faint">Leave / absent</span>
+        <span className="mono">
+          {summary.leave_days} / {summary.absent_days}
+        </span>
       </div>
     </>
   );

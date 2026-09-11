@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { sql } from "@/lib/db";
 import type { Hours, Internship, Office } from "@/lib/types";
 
@@ -22,13 +23,34 @@ const FALLBACK: SettingsShape = {
   domains: ["agthia.com", "agthia.ae", "alfoah.com"],
 };
 
+/**
+ * Every setting in one round trip, cached for the life of the request.
+ *
+ * There are five of them and they are tiny, so fetching them one key at a
+ * time was five separate trips to Singapore for a few hundred bytes.
+ *
+ * Written settings are not read back in the same request anywhere, so the
+ * cache cannot serve a stale value after a write. Keep it that way.
+ */
+export const allSettings = cache(async function allSettings(): Promise<SettingsShape> {
+  const rows = (await sql`select key, value from settings`) as {
+    key: keyof SettingsShape;
+    value: unknown;
+  }[];
+
+  const loaded = { ...FALLBACK };
+  for (const row of rows) {
+    if (row.key in loaded && row.value != null) {
+      (loaded as Record<string, unknown>)[row.key] = row.value;
+    }
+  }
+  return loaded;
+});
+
 export async function getSetting<K extends keyof SettingsShape>(
   key: K
 ): Promise<SettingsShape[K]> {
-  const rows = (await sql`select value from settings where key = ${key}`) as {
-    value: SettingsShape[K];
-  }[];
-  return rows[0]?.value ?? FALLBACK[key];
+  return (await allSettings())[key];
 }
 
 export async function setSetting<K extends keyof SettingsShape>(

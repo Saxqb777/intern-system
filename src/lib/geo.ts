@@ -34,9 +34,17 @@ export type Fix = { lat: number; lng: number; accuracy: number };
  * Reject anything that is not a real coordinate before it reaches the database.
  */
 export function parseFix(input: FixInput): Fix | null {
-  const lat = Number(input.lat);
-  const lng = Number(input.lng);
-  const accuracy = Number(input.accuracy);
+  // Number(null) is 0, and 0,0 is a real place in the Gulf of Guinea. Without
+  // this a browser that sent nulls would have a position recorded for it
+  // rather than being told its location could not be read.
+  const asNumber = (value: unknown): number =>
+    value === null || value === undefined || value === ""
+      ? Number.NaN
+      : Number(value);
+
+  const lat = asNumber(input.lat);
+  const lng = asNumber(input.lng);
+  const accuracy = asNumber(input.accuracy);
 
   if (!Number.isFinite(lat) || lat < -90 || lat > 90) return null;
   if (!Number.isFinite(lng) || lng < -180 || lng > 180) return null;
