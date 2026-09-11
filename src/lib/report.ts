@@ -16,6 +16,7 @@ import {
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  dayOf,
   dayShort,
   officeTime,
   sheetDate,
@@ -54,7 +55,7 @@ const GREY = "6E6F62";
  */
 export async function buildAttendanceSheet(input: SheetInput): Promise<Buffer> {
   const byDate = new Map(
-    input.rows.map((row) => [row.work_date.slice(0, 10), row])
+    input.rows.map((row) => [dayOf(row.work_date), row])
   );
   const days = weekdaysBetween(input.fromDate, input.toDate);
 

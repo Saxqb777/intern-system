@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { currentUser, isStaff } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { pendingWork } from "@/lib/queries";
-import { niceDate } from "@/lib/dates";
+import { dayOf, niceDate } from "@/lib/dates";
 import { DecideButtons } from "@/components/DecideButtons";
 import { RoleButtons } from "@/components/RoleButtons";
 
@@ -95,7 +95,7 @@ export default async function ApprovalsPage() {
                   <div className="grow">
                     <p style={{ fontSize: 14 }}>
                       <b>{req.name}</b> &middot; sign {req.kind} from outside on{" "}
-                      <span className="mono">{niceDate(req.work_date.slice(0, 10))}</span>
+                      <span className="mono">{niceDate(dayOf(req.work_date))}</span>
                     </p>
                     <p className="small muted">&ldquo;{req.reason}&rdquo;</p>
                   </div>
@@ -108,8 +108,8 @@ export default async function ApprovalsPage() {
                     <p style={{ fontSize: 14 }}>
                       <b>{req.name}</b> &middot; leave{" "}
                       <span className="mono">
-                        {niceDate(req.from_date.slice(0, 10))} to{" "}
-                        {niceDate(req.to_date.slice(0, 10))}
+                        {niceDate(dayOf(req.from_date))} to{" "}
+                        {niceDate(dayOf(req.to_date))}
                       </span>
                     </p>
                     <p className="small muted">&ldquo;{req.reason}&rdquo;</p>
@@ -162,7 +162,7 @@ export default async function ApprovalsPage() {
                         .join(" · ") || "—"}
                     </td>
                     <td className="dim">
-                      {niceDate(person.created_at.slice(0, 10))}
+                      {niceDate(dayOf(person.created_at))}
                     </td>
                   </tr>
                 ))}

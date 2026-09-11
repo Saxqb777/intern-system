@@ -1,5 +1,10 @@
 import { sql } from "@/lib/db";
-import { minutesBetween, officeToday, weekdaysBetween } from "@/lib/dates";
+import {
+  dayOf,
+  minutesBetween,
+  officeToday,
+  weekdaysBetween,
+} from "@/lib/dates";
 
 export type InternToday = {
   id: number;
@@ -95,7 +100,7 @@ export async function summariesFor(
       days = new Map();
       byUser.set(row.user_id, days);
     }
-    days.set(row.work_date.slice(0, 10), row);
+    days.set(dayOf(row.work_date), row);
   }
 
   for (const userId of userIds) {

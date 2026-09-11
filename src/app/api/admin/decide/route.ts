@@ -1,6 +1,6 @@
 import { sql } from "@/lib/db";
 import { asErrorResponse, requireUser } from "@/lib/auth";
-import { weekdaysBetween } from "@/lib/dates";
+import { dayOf, weekdaysBetween } from "@/lib/dates";
 
 /**
  * Approving or rejecting the two things interns ask for: an override on a
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         );
       }
       const req = rows[0];
-      const date = req.work_date.slice(0, 10);
+      const date = dayOf(req.work_date);
       const now = new Date().toISOString();
 
       if (approve) {
@@ -104,8 +104,8 @@ export async function POST(request: Request) {
         // Sent as one transaction: a fortnight off is ten separate writes, and
         // half a leave request landing on the sheet is worse than none.
         const days = weekdaysBetween(
-          req.from_date.slice(0, 10),
-          req.to_date.slice(0, 10)
+          dayOf(req.from_date),
+          dayOf(req.to_date)
         );
         await sql.transaction(
           days.map(

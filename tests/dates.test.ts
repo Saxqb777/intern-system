@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   dayArabic,
+  dayOf,
   dayShort,
   humanMinutes,
   isWeekday,
@@ -97,4 +98,24 @@ test("durations read the way a person would say them", () => {
   assert.equal(humanMinutes(194), "3h 14m");
   assert.equal(humanMinutes(0), "0h 00m");
   assert.equal(humanMinutes(60), "1h 00m");
+});
+
+// The driver hands date columns back as JavaScript Date objects, not strings,
+// and there is no option to change that. This is the seam that absorbs it, so
+// it gets tested against both shapes.
+test("a calendar day is read the same from a Date or a string", () => {
+  assert.equal(dayOf(new Date("2026-09-11T00:00:00.000Z")), "2026-09-11");
+  assert.equal(dayOf("2026-09-11"), "2026-09-11");
+  assert.equal(dayOf("2026-09-11T00:00:00.000Z"), "2026-09-11");
+});
+
+test("a timestamp keeps the day it happened on", () => {
+  // 05:02 UTC is 09:02 in Al Ain, same day either way.
+  assert.equal(dayOf(new Date("2026-09-11T05:02:00.000Z")), "2026-09-11");
+  assert.equal(dayOf("2026-09-11T13:04:00.000Z"), "2026-09-11");
+});
+
+test("a missing date does not throw", () => {
+  assert.equal(dayOf(null), "");
+  assert.equal(dayOf(undefined), "");
 });

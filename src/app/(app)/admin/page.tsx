@@ -5,6 +5,7 @@ import { getSetting, isTestMode, workdayMinutes } from "@/lib/settings";
 import { internsToday, pendingWork, summariesFor } from "@/lib/queries";
 import {
   dayLong,
+  dayOf,
   humanMinutes,
   niceDate,
   officeTime,
@@ -177,7 +178,7 @@ export default async function AdminDashboard() {
                       <b>{req.name}</b> wants to sign {req.kind} from outside the
                       fence on{" "}
                       <span className="mono">
-                        {niceDate(req.work_date.slice(0, 10))}
+                        {niceDate(dayOf(req.work_date))}
                       </span>
                     </p>
                     <p className="small muted">&ldquo;{req.reason}&rdquo;</p>
@@ -197,9 +198,9 @@ export default async function AdminDashboard() {
                     <p style={{ fontSize: 14 }}>
                       <b>{req.name}</b> is asking for{" "}
                       <span className="mono">
-                        {req.from_date.slice(0, 10) === req.to_date.slice(0, 10)
-                          ? niceDate(req.from_date.slice(0, 10))
-                          : `${niceDate(req.from_date.slice(0, 10))} to ${niceDate(req.to_date.slice(0, 10))}`}
+                        {dayOf(req.from_date) === dayOf(req.to_date)
+                          ? niceDate(dayOf(req.from_date))
+                          : `${niceDate(dayOf(req.from_date))} to ${niceDate(dayOf(req.to_date))}`}
                       </span>{" "}
                       off
                     </p>

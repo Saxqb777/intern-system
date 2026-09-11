@@ -53,6 +53,20 @@ function isoDate(d: Date): string {
   );
 }
 
+/**
+ * The calendar day of a value read from the database, as "YYYY-MM-DD".
+ *
+ * Date columns come back from the driver as JavaScript Date objects, not
+ * strings, and there is no driver option to change that. Every read of a
+ * work_date, from_date or created_at goes through here so the rest of the app
+ * can keep treating days as plain strings.
+ */
+export function dayOf(value: unknown): string {
+  // A DATE column is parsed to midnight UTC, so the ISO date is the same day.
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value ?? "").slice(0, 10);
+}
+
 export function parseDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d));

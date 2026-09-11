@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  dayOf,
   dayShort,
   humanMinutes,
   minutesBetween,
@@ -52,7 +53,7 @@ export function SheetView({
     router.push(`/admin/sheet?${next.toString()}`);
   }
 
-  const byDate = new Map(rows.map((r) => [r.work_date.slice(0, 10), r]));
+  const byDate = new Map(rows.map((r) => [dayOf(r.work_date), r]));
   const days = weekdaysBetween(from, to);
   const reportUrl = `/api/report?intern=${selectedId}&from=${from}&to=${to}`;
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { niceDate } from "@/lib/dates";
+import { dayOf, niceDate } from "@/lib/dates";
 import { LeaveForm } from "./LeaveForm";
 
 export const dynamic = "force-dynamic";
@@ -52,9 +52,9 @@ export default async function LeavePage() {
                 <div key={req.id} className="spread" style={{ padding: "15px 20px" }}>
                   <div className="grow">
                     <p className="mono" style={{ fontSize: 14, fontWeight: 500 }}>
-                      {req.from_date.slice(0, 10) === req.to_date.slice(0, 10)
-                        ? niceDate(req.from_date.slice(0, 10))
-                        : `${niceDate(req.from_date.slice(0, 10))} to ${niceDate(req.to_date.slice(0, 10))}`}
+                      {dayOf(req.from_date) === dayOf(req.to_date)
+                        ? niceDate(dayOf(req.from_date))
+                        : `${niceDate(dayOf(req.from_date))} to ${niceDate(dayOf(req.to_date))}`}
                     </p>
                     <p className="small muted">{req.reason}</p>
                     {req.decided_by_name && (

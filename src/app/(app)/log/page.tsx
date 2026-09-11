@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { dayShort, niceDate, officeToday } from "@/lib/dates";
+import {
+  dayOf,
+  dayShort,
+  niceDate,
+  officeToday,
+} from "@/lib/dates";
 import { LogEditor } from "./LogEditor";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +25,8 @@ export default async function LogPage() {
     limit 60
   `) as { work_date: string; body: string; updated_at: string }[];
 
-  const todayRow = rows.find((r) => r.work_date.slice(0, 10) === today);
-  const earlier = rows.filter((r) => r.work_date.slice(0, 10) !== today);
+  const todayRow = rows.find((r) => dayOf(r.work_date) === today);
+  const earlier = rows.filter((r) => dayOf(r.work_date) !== today);
 
   return (
     <>
@@ -46,8 +51,8 @@ export default async function LogPage() {
               {earlier.map((entry) => (
                 <article key={entry.work_date} style={{ padding: "16px 20px" }}>
                   <p className="eyebrow" style={{ marginBottom: 5 }}>
-                    {dayShort(entry.work_date.slice(0, 10))}{" "}
-                    {niceDate(entry.work_date.slice(0, 10))}
+                    {dayShort(dayOf(entry.work_date))}{" "}
+                    {niceDate(dayOf(entry.work_date))}
                   </p>
                   <p style={{ whiteSpace: "pre-wrap" }}>{entry.body}</p>
                 </article>
