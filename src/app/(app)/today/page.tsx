@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { getSetting, isTestMode, workdayMinutes } from "@/lib/settings";
+import { getSetting, workdayMinutes } from "@/lib/settings";
 import {
   dayArabic,
   dayLong,
@@ -22,11 +22,11 @@ export default async function TodayPage() {
   if (user.role !== "intern") redirect("/admin");
 
   const today = officeToday();
-  const [office, hours, internship, testMode] = await Promise.all([
+  const [office, hours, internship, test] = await Promise.all([
     getSetting("office"),
     getSetting("hours"),
     getSetting("internship"),
-    isTestMode(),
+    getSetting("test_mode"),
   ]);
 
   const rows = (await sql`
@@ -82,7 +82,8 @@ export default async function TodayPage() {
         dayMinutes={workdayMinutes(hours)}
         startsAt={hours.start}
         endsAt={hours.end}
-        testMode={testMode}
+        testMode={test.on}
+        simulateOutside={Boolean(test.on && test.simulate_outside)}
         pendingOverride={pending.length > 0}
         alreadyWorked={minutesBetween(row?.time_in ?? null, row?.time_out ?? null)}
       />

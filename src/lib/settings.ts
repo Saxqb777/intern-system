@@ -5,7 +5,7 @@ type SettingsShape = {
   office: Office;
   hours: Hours;
   internship: Internship;
-  test_mode: { on: boolean };
+  test_mode: { on: boolean; simulate_outside?: boolean };
   domains: string[];
 };
 
@@ -18,7 +18,7 @@ const FALLBACK: SettingsShape = {
   },
   hours: { start: "09:00", end: "17:00" },
   internship: { start_date: "2026-09-07", end_date: "2026-12-04" },
-  test_mode: { on: true },
+  test_mode: { on: true, simulate_outside: false },
   domains: ["agthia.com", "agthia.ae", "alfoah.com"],
 };
 

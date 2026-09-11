@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function SignupForm({ domains }: { domains: string[] }) {
+export function OwnerForm() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +22,10 @@ export function SignupForm({ domains }: { domains: string[] }) {
         email: data.get("email"),
         password: data.get("password"),
         position: data.get("position"),
-        department: data.get("department"),
-        university: data.get("university"),
+        setupCode: data.get("setupCode"),
       }),
     });
-    const body = (await res.json()) as { error?: string; role?: string };
+    const body = (await res.json()) as { error?: string };
 
     if (!res.ok) {
       setError(body.error ?? "Could not create the account.");
@@ -34,22 +33,21 @@ export function SignupForm({ domains }: { domains: string[] }) {
       return;
     }
 
-    router.replace("/pending");
+    router.replace("/super");
     router.refresh();
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} style={{ marginTop: 22 }}>
       {error && <p className="note bad">{error}</p>}
 
       <div className="field">
-        <label htmlFor="name">Full name</label>
+        <label htmlFor="name">Your name</label>
         <input id="name" name="name" required autoComplete="name" />
-        <p className="help">This is the name printed on the university sheet.</p>
       </div>
 
       <div className="field">
-        <label htmlFor="email">Agthia email</label>
+        <label htmlFor="email">Your email</label>
         <input
           id="email"
           name="email"
@@ -57,12 +55,9 @@ export function SignupForm({ domains }: { domains: string[] }) {
           required
           autoComplete="username"
           inputMode="email"
-          placeholder={`you@${domains[0]}`}
         />
         <p className="help">
-          {domains.length === 1
-            ? `Only ${domains[0]} addresses.`
-            : `Accepted: ${domains.join(", ")}.`}
+          Any address. This one is not checked against Agthia domains.
         </p>
       </div>
 
@@ -80,29 +75,25 @@ export function SignupForm({ domains }: { domains: string[] }) {
       </div>
 
       <div className="field">
-        <label htmlFor="position">Internal position</label>
+        <label htmlFor="position">What to call your role</label>
         <input
           id="position"
           name="position"
-          placeholder="Marketing intern"
+          placeholder="System administrator"
         />
+        <p className="help">Shown next to your name in the app.</p>
       </div>
 
       <div className="field">
-        <label htmlFor="department">Department</label>
-        <input id="department" name="department" placeholder="Marketing" />
-      </div>
-
-      <div className="field">
-        <label htmlFor="university">University</label>
-        <input id="university" name="university" placeholder="UAEU" />
+        <label htmlFor="setupCode">Setup code</label>
+        <input id="setupCode" name="setupCode" required autoComplete="off" />
         <p className="help">
-          Leave blank if you are a supervisor and not an intern.
+          The <span className="mono">SETUP_CODE</span> you put into Vercel.
         </p>
       </div>
 
       <button className="btn solid wide" type="submit" disabled={busy}>
-        {busy ? "Creating" : "Create account"}
+        {busy ? "Creating" : "Become the system owner"}
       </button>
     </form>
   );

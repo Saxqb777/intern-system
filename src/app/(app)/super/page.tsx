@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { getSetting, isTestMode } from "@/lib/settings";
+import { getSetting } from "@/lib/settings";
 import { countDemo, DEMO_LOGIN } from "@/lib/demo";
 import { SystemControls } from "./SystemControls";
 
@@ -12,8 +12,8 @@ export default async function SuperPage() {
   if (!user) redirect("/login");
   if (user.role !== "superuser") redirect("/admin");
 
-  const [testMode, demoRows, office] = await Promise.all([
-    isTestMode(),
+  const [test, demoRows, office] = await Promise.all([
+    getSetting("test_mode"),
     countDemo(),
     getSetting("office"),
   ]);
@@ -41,7 +41,8 @@ export default async function SuperPage() {
 
       <div className="stack-l">
         <SystemControls
-          testMode={testMode}
+          testMode={test.on}
+          simulateOutside={Boolean(test.simulate_outside)}
           demoRows={demoRows}
           officeLabel={office.label}
           radius={office.radius_m}

@@ -1,7 +1,7 @@
 import { sql } from "@/lib/db";
 import { asErrorResponse, requireUser } from "@/lib/auth";
 import { MAX_ACCURACY_M, metresBetween, parseFix } from "@/lib/geo";
-import { getSetting, isTestMode } from "@/lib/settings";
+import { getSetting } from "@/lib/settings";
 import { officeToday } from "@/lib/dates";
 
 type Body = {
@@ -25,7 +25,8 @@ export async function POST(request: Request) {
 
     const action = body.action === "out" ? "out" : "in";
     const today = officeToday();
-    const testMode = await isTestMode();
+    const test = await getSetting("test_mode");
+    const testMode = test.on;
     const office = await getSetting("office");
 
     const fix = parseFix({
@@ -37,6 +38,16 @@ export async function POST(request: Request) {
     // In test mode we skip the fence so the system can be demonstrated away
     // from Al Foah. Everything else behaves exactly as it will when live.
     let distance: number | null = null;
+
+    // Except when the owner has asked test mode to pretend they are out of
+    // range, so the refusal itself can be shown to someone without driving
+    // away from the building.
+    if (testMode && test.simulate_outside) {
+      return refuse(
+        `You are 4.2 km from the office. Attendance only works inside ${office.radius_m} m of ${office.label}.`,
+        { distance: 4200, outside: true }
+      );
+    }
 
     if (!testMode) {
       if (!fix) {

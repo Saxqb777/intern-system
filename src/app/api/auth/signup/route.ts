@@ -9,11 +9,16 @@ import {
 import { getSetting } from "@/lib/settings";
 
 /**
- * Anyone can reach this, so it does two things before it will create anything:
- * checks the email sits on an Agthia domain, and refuses to let the caller
- * choose their own role. Everybody lands as "pending" and waits for a
- * supervisor. The only way past that is the setup code, which exists once so
- * the very first system owner can be created.
+ * Two doors lead here.
+ *
+ * Staff (/signup) have to be on an Agthia domain, and land as "pending" with
+ * no access until a supervisor gives them a role. They never choose their own.
+ *
+ * The system owner (/owner) comes through with the setup code instead. That
+ * code is a stronger gate than an email domain, so the domain check does not
+ * apply: whoever runs this system is not necessarily an Agthia employee. It
+ * only works while nobody owns the system, so it cannot be reused later to
+ * grab access.
  */
 export async function POST(request: Request) {
   try {
@@ -37,13 +42,6 @@ export async function POST(request: Request) {
       return bad("Your password needs at least 8 characters.");
     }
 
-    const domains = await getSetting("domains");
-    if (!domains.includes(emailDomain(email))) {
-      return bad(
-        `Only Agthia addresses can sign up. Try your ${domains[0]} email.`
-      );
-    }
-
     const existing = (await sql`
       select id from users where email = ${email}
     `) as { id: number }[];
@@ -51,32 +49,40 @@ export async function POST(request: Request) {
       return bad("There is already an account on that email. Sign in instead.");
     }
 
-    // The setup code makes the first system owner. It only works while there
-    // is no system owner at all, so it cannot be reused later to grab access.
     let role = "pending";
+
     if (setupCode) {
       const owners = (await sql`
         select id from users where role = 'superuser' limit 1
       `) as { id: number }[];
 
-      const expected = process.env.SETUP_CODE;
       if (owners.length) {
-        return bad("The system owner already exists. Ask them to approve you.");
+        return bad(
+          "This system already has an owner. Ask them to approve your account instead."
+        );
       }
-      if (!expected) {
+      if (!process.env.SETUP_CODE) {
         return bad("No setup code is configured on the server.");
       }
-      if (setupCode !== expected) {
+      if (setupCode !== process.env.SETUP_CODE) {
         return bad("That setup code is wrong.");
       }
       role = "superuser";
+    } else {
+      // Staff door. Owners skip this on purpose, see the note above.
+      const domains = await getSetting("domains");
+      if (!domains.includes(emailDomain(email))) {
+        return bad(
+          `Only Agthia addresses can sign up here. Try your ${domains[0]} email.`
+        );
+      }
     }
 
-    const hash = await hashPassword(password);
     const inserted = (await sql`
       insert into users (email, name, password_hash, role, position, department, university, approved_at)
       values (
-        ${email}, ${name}, ${hash}, ${role}, ${position}, ${department}, ${university},
+        ${email}, ${name}, ${await hashPassword(password)}, ${role},
+        ${position}, ${department}, ${university},
         ${role === "superuser" ? new Date().toISOString() : null}
       )
       returning id

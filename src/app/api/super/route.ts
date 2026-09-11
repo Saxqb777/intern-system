@@ -1,5 +1,5 @@
 import { asErrorResponse, requireUser } from "@/lib/auth";
-import { setSetting } from "@/lib/settings";
+import { getSetting, setSetting } from "@/lib/settings";
 import { seedDemo, wipeDemo } from "@/lib/demo";
 
 /** Test mode and demo data. Only the system owner gets in here. */
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     if (action === "seed") {
       const result = await seedDemo(owner.name);
-      await setSetting("test_mode", { on: true });
+      await setSetting("test_mode", { on: true, simulate_outside: false });
       return Response.json({ ok: true, ...result });
     }
 
@@ -21,7 +21,22 @@ export async function POST(request: Request) {
     }
 
     if (action === "test_on") {
-      await setSetting("test_mode", { on: true });
+      await setSetting("test_mode", { on: true, simulate_outside: false });
+      return Response.json({ ok: true });
+    }
+
+    if (action === "simulate_outside") {
+      const test = await getSetting("test_mode");
+      if (!test.on) {
+        return Response.json(
+          { error: "That only works in test mode." },
+          { status: 409 }
+        );
+      }
+      await setSetting("test_mode", {
+        on: true,
+        simulate_outside: Boolean(body.on),
+      });
       return Response.json({ ok: true });
     }
 
@@ -29,7 +44,7 @@ export async function POST(request: Request) {
       // Going live means the fence is enforced and nothing demo remains, so
       // the two happen together rather than as two things to remember.
       await wipeDemo();
-      await setSetting("test_mode", { on: false });
+      await setSetting("test_mode", { on: false, simulate_outside: false });
       return Response.json({ ok: true });
     }
 

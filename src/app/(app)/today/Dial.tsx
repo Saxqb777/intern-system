@@ -29,6 +29,8 @@ type Props = {
   startsAt: string;
   endsAt: string;
   testMode: boolean;
+  /** Owner is demonstrating the refusal without leaving the building. */
+  simulateOutside: boolean;
   pendingOverride: boolean;
   alreadyWorked: number;
 };
@@ -111,9 +113,9 @@ export function Dial(props: Props) {
     return () => clearInterval(timer);
   }, [state, props.timeIn]);
 
-  const inside =
-    props.testMode ||
-    (geo.kind === "found" && geo.distance <= props.radius);
+  const inside = props.simulateOutside
+    ? false
+    : props.testMode || (geo.kind === "found" && geo.distance <= props.radius);
 
   const canPunch = state !== "done" && (props.testMode || geo.kind === "found");
 
@@ -173,7 +175,7 @@ export function Dial(props: Props) {
     <div className="stack" style={{ maxWidth: 430, marginInline: "auto" }}>
       {error && <p className="note bad">{error}</p>}
 
-      {props.testMode && (
+      {props.testMode && !props.simulateOutside && (
         <p className="note warn">
           Test mode is on, so the office fence is switched off and you can sign
           in from anywhere. Turn it off before the interns start.
@@ -212,6 +214,7 @@ export function Dial(props: Props) {
         radius={props.radius}
         label={props.officeLabel}
         testMode={props.testMode}
+        simulateOutside={props.simulateOutside}
       />
 
       {!inside && state !== "done" && (
@@ -308,12 +311,26 @@ function LocationChip({
   radius,
   label,
   testMode,
+  simulateOutside,
 }: {
   geo: GeoState;
   radius: number;
   label: string;
   testMode: boolean;
+  simulateOutside: boolean;
 }) {
+  if (simulateOutside) {
+    return (
+      <div className="geo off">
+        <span className="dot" />
+        <span className="grow">
+          <b>Away from {label}</b>
+          <span>4.2 km from centre &middot; accuracy 14 m</span>
+        </span>
+      </div>
+    );
+  }
+
   if (testMode) {
     return (
       <div className="geo unknown">
