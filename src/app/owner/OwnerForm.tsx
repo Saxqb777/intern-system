@@ -79,7 +79,6 @@ export function OwnerForm() {
         <input
           id="position"
           name="position"
-          placeholder="System administrator"
         />
         <p className="help">Shown next to your name in the app.</p>
       </div>
@@ -93,7 +92,7 @@ export function OwnerForm() {
       </div>
 
       <button className="btn solid wide" type="submit" disabled={busy}>
-        {busy ? "Creating" : "Become the system owner"}
+        {busy ? "Creating" : "Become an administrator"}
       </button>
     </form>
   );

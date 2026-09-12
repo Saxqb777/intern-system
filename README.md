@@ -28,11 +28,11 @@ Built for two interns and their supervisor. It is deliberately small.
 - Download the university sheet for any intern over any date range.
 - Set where the office is, how long the working day runs, and the placement dates.
 
-**System owner (one person, you)**
+**Administrator (one person)**
 
-- Test mode, which switches the fence off and seeds demo data so the system can
-  be shown to people before it is real.
-- One button that wipes the demo, turns the fence on, and goes live.
+- Creates supervisor and intern accounts directly, and deletes any account.
+- There is no demo mode. The system is always live; a walkthrough is done by
+  creating a real account, showing it, and deleting it afterwards.
 
 ---
 
@@ -78,16 +78,21 @@ am standing now**. That is far more accurate than dropping a pin on a map. Set
 the radius while you are there: 200 m covers a typical site without letting
 someone punch in from the road.
 
-### 6. Show it to people
+### 6. Create the accounts
 
-Open **System**, press **Seed demo data**. You get two demo interns with three
-weeks of attendance, a work log, tasks, and one of each kind of request sitting
-in the approvals queue. Demo logins are shown on that page.
+Open **Accounts** and press **New account**. Make the supervisor, then the
+interns. You set their password and hand it to them; they can change it later.
 
-### 7. Go live
+Interns can also sign up themselves at `/signup` with an Agthia address. Those
+accounts open nothing until a supervisor gives them a role on the **People**
+page.
 
-**System → Go live**. It deletes every demo row and turns the office fence on.
-Real accounts and real attendance are never touched.
+### 7. Showing it to someone
+
+There is no demo mode, on purpose: a system with a rehearsal setting is a
+system whose records can be doubted. To walk someone through it, make a real
+intern account, sign in as them in a private window, and delete the account
+afterwards on the **Accounts** page. Deleting takes their attendance with it.
 
 ---
 

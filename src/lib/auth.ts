@@ -71,7 +71,7 @@ export const currentUser = cache(async function currentUser(): Promise<User | nu
 
   const rows = (await sql`
     select id, email, name, role, position, department, mentor, university,
-           created_at, is_demo
+           created_at
     from users where id = ${uid}
   `) as User[];
 

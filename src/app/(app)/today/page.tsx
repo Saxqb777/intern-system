@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { getSetting, workdayMinutes } from "@/lib/settings";
+import { getSetting, placedOffice, workdayMinutes } from "@/lib/settings";
 import {
   dayArabic,
   dayLong,
@@ -22,12 +22,12 @@ export default async function TodayPage() {
   if (user.role !== "intern") redirect("/admin");
 
   const today = officeToday();
-  const [office, hours, internship, test] = await Promise.all([
+  const [officeSetting, hours, internship] = await Promise.all([
     getSetting("office"),
     getSetting("hours"),
     getSetting("internship"),
-    getSetting("test_mode"),
   ]);
+  const office = placedOffice(officeSetting);
 
   const rows = (await sql`
     select time_in, time_out, signature from attendance
@@ -75,15 +75,13 @@ export default async function TodayPage() {
         timeIn={row?.time_in ?? null}
         timeOut={row?.time_out ?? null}
         hasSignature={Boolean(row?.signature)}
-        officeLabel={office.label}
-        radius={office.radius_m}
-        officeLat={office.lat}
-        officeLng={office.lng}
+        officeLabel={office?.label ?? officeSetting.label}
+        radius={office?.radius_m ?? officeSetting.radius_m}
+        officeLat={office?.lat ?? null}
+        officeLng={office?.lng ?? null}
         dayMinutes={workdayMinutes(hours)}
         startsAt={hours.start}
         endsAt={hours.end}
-        testMode={test.on}
-        simulateOutside={Boolean(test.on && test.simulate_outside)}
         pendingOverride={pending.length > 0}
         alreadyWorked={minutesBetween(row?.time_in ?? null, row?.time_out ?? null)}
       />

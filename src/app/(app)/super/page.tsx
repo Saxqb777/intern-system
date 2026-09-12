@@ -1,82 +1,48 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { getSetting } from "@/lib/settings";
-import { countDemo, DEMO_LOGIN } from "@/lib/demo";
-import { SystemControls } from "./SystemControls";
+import { getSetting, placedOffice } from "@/lib/settings";
+import { niceDate } from "@/lib/dates";
+import { AccountsPanel, type Person } from "./AccountsPanel";
 
 export const dynamic = "force-dynamic";
 
-export default async function SuperPage() {
+export default async function AccountsPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
   if (user.role !== "superuser") redirect("/admin");
 
-  const [test, demoRows, office] = await Promise.all([
-    getSetting("test_mode"),
-    countDemo(),
-    getSetting("office"),
-  ]);
-
-  const counts = (await sql`
-    select
-      count(*) filter (where role = 'intern')    as interns,
-      count(*) filter (where role = 'admin')     as admins,
-      count(*) filter (where role = 'superuser') as owners,
-      count(*) filter (where role = 'pending')   as pending
+  const office = await getSetting("office");
+  const people = (await sql`
+    select id, name, email, role, position, department, university, created_at
     from users
-  `) as { interns: string; admins: string; owners: string; pending: string }[];
-
-  const tally = counts[0];
+    order by
+      case role
+        when 'superuser' then 0
+        when 'admin' then 1
+        when 'intern' then 2
+        else 3
+      end,
+      name
+  `) as Person[];
 
   return (
     <>
       <header className="pagehead">
-        <p className="eyebrow">System owner only</p>
-        <h1>System</h1>
+        <p className="eyebrow">Administration</p>
+        <h1>Accounts</h1>
         <p className="lede" style={{ marginTop: 6 }}>
-          Test mode, demo data, and the switch that makes this real.
+          Everyone who can open this system, and the only place accounts are
+          created or removed.
         </p>
       </header>
 
-      <div className="stack-l">
-        <SystemControls
-          testMode={test.on}
-          simulateOutside={Boolean(test.simulate_outside)}
-          demoRows={demoRows}
-          officeLabel={office.label}
-          radius={office.radius_m}
-          demoPassword={DEMO_LOGIN.password}
-          demoEmails={DEMO_LOGIN.people.map((p) => p.email)}
-        />
-
-        <section className="panel">
-          <header>
-            <h2>Who is on the system</h2>
-          </header>
-          <div className="tablewrap">
-            <table>
-              <tbody>
-                <Line label="Interns" value={tally.interns} />
-                <Line label="Supervisors" value={tally.admins} />
-                <Line label="System owners" value={tally.owners} />
-                <Line label="Waiting for approval" value={tally.pending} />
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+      <AccountsPanel
+        people={people}
+        meId={user.id}
+        officePlaced={Boolean(placedOffice(office))}
+        today={niceDate(new Date().toISOString().slice(0, 10))}
+      />
     </>
-  );
-}
-
-function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <tr>
-      <td>{label}</td>
-      <td className="num" style={{ textAlign: "end" }}>
-        {value}
-      </td>
-    </tr>
   );
 }

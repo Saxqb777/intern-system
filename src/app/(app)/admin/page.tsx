@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser, isStaff } from "@/lib/auth";
-import { getSetting, isTestMode, workdayMinutes } from "@/lib/settings";
+import { getSetting, placedOffice, workdayMinutes } from "@/lib/settings";
 import { internsToday, pendingWork, summariesFor } from "@/lib/queries";
 import {
   dayLong,
@@ -24,12 +24,12 @@ export default async function AdminDashboard() {
   if (!isStaff(user.role)) redirect("/today");
 
   const today = officeToday();
-  const [interns, work, hours, internship, testMode] = await Promise.all([
+  const [interns, work, hours, internship, office] = await Promise.all([
     internsToday(),
     pendingWork(),
     getSetting("hours"),
     getSetting("internship"),
-    isTestMode(),
+    getSetting("office"),
   ]);
 
   const dayMinutes = workdayMinutes(hours);
@@ -61,16 +61,16 @@ export default async function AdminDashboard() {
       </header>
 
       <div className="stack-l">
-        {testMode && (
-          <p className="note warn">
-            Test mode is on. The office fence is switched off and anything below
-            may be demo data.{" "}
-            {user.role === "superuser" ? (
-              <Link href="/super">Go live in System</Link>
-            ) : (
-              "Ask the system owner to turn it off before the interns start."
-            )}
-          </p>
+        {!placedOffice(office) && (
+          <div className="note warn">
+            <b style={{ display: "block", marginBottom: 4 }}>
+              Nobody can sign in yet
+            </b>
+            The office location has not been set, so attendance is refused for
+            everyone. Open <Link href="/admin/settings">Settings</Link> while you
+            are standing in the building and press the button. It takes a second
+            and only needs doing once.
+          </div>
         )}
 
         {/* ---- who is in ---- */}

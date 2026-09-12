@@ -78,18 +78,17 @@ export function SignupForm({ domains }: { domains: string[] }) {
         <input
           id="position"
           name="position"
-          placeholder="Marketing intern"
         />
       </div>
 
       <div className="field">
         <label htmlFor="department">Department</label>
-        <input id="department" name="department" placeholder="Marketing" />
+        <input id="department" name="department" />
       </div>
 
       <div className="field">
         <label htmlFor="university">University</label>
-        <input id="university" name="university" placeholder="UAEU (interns only)" />
+        <input id="university" name="university" />
       </div>
 
       <button className="btn solid wide" type="submit" disabled={busy}>

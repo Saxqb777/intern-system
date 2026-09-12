@@ -82,7 +82,6 @@ export function LeaveForm() {
             id="why"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="University exam"
             required
           />
         </div>

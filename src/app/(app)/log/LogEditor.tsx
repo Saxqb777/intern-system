@@ -57,7 +57,6 @@ export function LogEditor({
             id="entry"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Sat in on the supplier call about the date packaging line. Pulled last quarter's volumes into a sheet for Khalid. Started reading the HACCP file."
             style={{ minHeight: 190 }}
           />
           <p className="help">Saves on its own.</p>

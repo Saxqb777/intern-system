@@ -6,28 +6,23 @@ type SettingsShape = {
   office: Office;
   hours: Hours;
   internship: Internship;
-  test_mode: { on: boolean; simulate_outside?: boolean };
   domains: string[];
 };
 
+/**
+ * The office has no coordinates until somebody stands in it and sets them.
+ * Guessing would be worse than admitting it: a fence in the wrong place
+ * refuses the people who are actually at work.
+ */
 const FALLBACK: SettingsShape = {
-  office: {
-    lat: 24.1302,
-    lng: 55.8023,
-    radius_m: 200,
-    label: "Agthia Al Foah, Al Ain",
-  },
+  office: { lat: null, lng: null, radius_m: 200, label: "the office" },
   hours: { start: "09:00", end: "17:00" },
   internship: { start_date: "2026-09-07", end_date: "2026-12-04" },
-  test_mode: { on: true, simulate_outside: false },
   domains: ["agthia.com", "agthia.ae", "alfoah.com"],
 };
 
 /**
  * Every setting in one round trip, cached for the life of the request.
- *
- * There are five of them and they are tiny, so fetching them one key at a
- * time was five separate trips to Singapore for a few hundred bytes.
  *
  * Written settings are not read back in the same request anywhere, so the
  * cache cannot serve a stale value after a write. Keep it that way.
@@ -64,8 +59,13 @@ export async function setSetting<K extends keyof SettingsShape>(
   `;
 }
 
-export async function isTestMode(): Promise<boolean> {
-  return (await getSetting("test_mode")).on;
+/** An office with real coordinates. Null until somebody sets it. */
+export function placedOffice(
+  office: Office
+): { lat: number; lng: number; radius_m: number; label: string } | null {
+  return typeof office.lat === "number" && typeof office.lng === "number"
+    ? { lat: office.lat, lng: office.lng, radius_m: office.radius_m, label: office.label }
+    : null;
 }
 
 /** Minutes in a full working day, from the configured start and end. */

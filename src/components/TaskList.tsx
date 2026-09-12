@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { niceDate, officeToday } from "@/lib/dates";
+import { dayOf, niceDate, officeToday } from "@/lib/dates";
 
 export type TaskItem = {
   id: number;
@@ -83,7 +83,7 @@ export function TaskList({
                   id="tasktitle"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Finish the supplier comparison sheet"
+                 
                 />
               </div>
               <div className="field" style={{ width: 160 }}>
@@ -109,7 +109,10 @@ export function TaskList({
           <span className="small faint">{open.length}</span>
         </header>
         {open.length === 0 ? (
-          <p className="empty">Nothing on the list.</p>
+          <p className="empty">
+            Nothing to do yet. Add something above, or wait for your supervisor
+            to.
+          </p>
         ) : (
           <div className="divide">
             {open.map((task) => (
@@ -159,7 +162,7 @@ function Row({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  const due = task.due_date?.slice(0, 10) ?? null;
+  const due = task.due_date ? dayOf(task.due_date) : null;
   const late = !task.done && due !== null && due < today;
 
   return (

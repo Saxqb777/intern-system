@@ -23,14 +23,12 @@ type Props = {
   hasSignature: boolean;
   officeLabel: string;
   radius: number;
-  officeLat: number;
-  officeLng: number;
+  /** Null until somebody positions the office. */
+  officeLat: number | null;
+  officeLng: number | null;
   dayMinutes: number;
   startsAt: string;
   endsAt: string;
-  testMode: boolean;
-  /** Owner is demonstrating the refusal without leaving the building. */
-  simulateOutside: boolean;
   pendingOverride: boolean;
   alreadyWorked: number;
 };
@@ -59,6 +57,7 @@ export function Dial(props: Props) {
   // Follow the phone rather than asking once, so the chip stays honest while
   // they walk from the car park to the desk.
   useEffect(() => {
+    if (props.officeLat === null || props.officeLng === null) return;
     if (!("geolocation" in navigator)) {
       setGeo({ kind: "failed", message: "This browser cannot do location." });
       return;
@@ -77,8 +76,8 @@ export function Dial(props: Props) {
           distance: metresBetween(
             fix.lat,
             fix.lng,
-            props.officeLat,
-            props.officeLng
+            props.officeLat as number,
+            props.officeLng as number
           ),
         });
       },
@@ -113,11 +112,9 @@ export function Dial(props: Props) {
     return () => clearInterval(timer);
   }, [state, props.timeIn]);
 
-  const inside = props.simulateOutside
-    ? false
-    : props.testMode || (geo.kind === "found" && geo.distance <= props.radius);
-
-  const canPunch = state !== "done" && (props.testMode || geo.kind === "found");
+  const placed = props.officeLat !== null && props.officeLng !== null;
+  const inside = placed && geo.kind === "found" && geo.distance <= props.radius;
+  const canPunch = placed && state !== "done" && geo.kind === "found";
 
   const send = useCallback(
     async (action: "in" | "out", signature?: string) => {
@@ -197,7 +194,7 @@ export function Dial(props: Props) {
           >
             <Leaf className="leaf" />
             <span className="word">{wordFor(state, busy)}</span>
-            <span className="hint">{hintFor(state, props, elapsed, inside)}</span>
+            <span className="hint">{hintFor(state, props, inside)}</span>
           </button>
         </div>
       </div>
@@ -206,15 +203,21 @@ export function Dial(props: Props) {
         geo={geo}
         radius={props.radius}
         label={props.officeLabel}
-        testMode={props.testMode}
-        simulateOutside={props.simulateOutside}
+        placed={placed}
       />
 
-      {!inside && state !== "done" && (
+      {placed && !inside && state !== "done" && (
         <OutsideNote
           pending={props.pendingOverride}
           onAsk={() => overrideDialog.current?.showModal()}
         />
+      )}
+
+      {!placed && (
+        <p className="note plain">
+          Attendance opens once your supervisor sets where the office is. They
+          only need to do it once.
+        </p>
       )}
 
       <dl className="stamps">
@@ -287,13 +290,9 @@ function wordFor(state: string, busy: boolean): string {
   return "Done";
 }
 
-function hintFor(
-  state: string,
-  props: Props,
-  elapsed: number,
-  inside: boolean
-): string {
+function hintFor(state: string, props: Props, inside: boolean): string {
   if (state === "done") return "Signed off for today";
+  if (props.officeLat === null) return "Not available yet";
   if (!inside) return "Not at the office";
   if (state === "in") return `In since ${officeTime(props.timeIn)}`;
   return "Tap to start your day";
@@ -303,34 +302,20 @@ function LocationChip({
   geo,
   radius,
   label,
-  testMode,
-  simulateOutside,
+  placed,
 }: {
   geo: GeoState;
   radius: number;
   label: string;
-  testMode: boolean;
-  simulateOutside: boolean;
+  placed: boolean;
 }) {
-  if (simulateOutside) {
-    return (
-      <div className="geo off">
-        <span className="dot" />
-        <span className="grow">
-          <b>Away from {label}</b>
-          <span>4.2 km from centre &middot; accuracy 14 m</span>
-        </span>
-      </div>
-    );
-  }
-
-  if (testMode) {
+  if (!placed) {
     return (
       <div className="geo unknown">
         <span className="dot" />
         <span className="grow">
-          <b>Location check is off</b>
-          <span>Test mode</span>
+          <b>Office not set</b>
+          <span>Waiting on your supervisor</span>
         </span>
       </div>
     );
@@ -491,7 +476,6 @@ function OverrideDialog({
             id="ovreason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Working at the Al Saad site today with Khalid, GPS will not lock inside the cold store."
           />
         </div>
 

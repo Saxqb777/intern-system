@@ -168,9 +168,36 @@ p { margin: 0; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .topbar .mark img { filter: brightness(0) invert(1); }
 }
-.topbar .who { text-align: end; line-height: 1.25; }
-.topbar .who b { display: block; font-size: 13.5px; font-weight: 600; }
-.topbar .who span { font-family: var(--data); font-size: 11px; color: var(--ink-faint); }
+/* Name, role, and the way out. Sits as one unit so the sign out never
+   reads as a stray link next to somebody's name. */
+.account { display: flex; align-items: center; gap: 14px; }
+.account .who { text-align: end; line-height: 1.25; }
+.account .who b { display: block; font-size: 13.5px; font-weight: 600; }
+.account .who span {
+  font-family: var(--data);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.signout {
+  font-family: var(--body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.signout:hover:not(:disabled) { border-color: var(--ink-faint); color: var(--ink); }
+.signout:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 620px) {
+  .account .who { display: none; }
+}
 
 .navlinks { display: flex; gap: 4px; flex-wrap: wrap; }
 .navlinks a {
@@ -535,3 +562,90 @@ dialog.sheet .inner { padding: 22px; display: flex; flex-direction: column; gap:
     padding-inline-start: 4px;
   }
 }
+
+
+/* ---------- people ---------- */
+
+/* Initials rather than a photo. Nobody is uploading a photo to an
+   attendance system, and a lettered disc reads as a person at a glance. */
+.initials {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--green-wash);
+  color: var(--green-ink);
+  font-family: var(--data);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid color-mix(in srgb, var(--green) 28%, transparent);
+}
+
+/* A count in a panel header, quiet enough not to compete with the heading. */
+.count {
+  font-family: var(--data);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two roles, two cards. A dropdown hides the difference between them; these
+   put the consequence of each choice on screen before it is made. */
+.choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice label {
+  border: 1px solid var(--rule);
+  border-radius: 11px;
+  padding: 13px 14px;
+  cursor: pointer;
+  display: block;
+  background: var(--surface);
+  transition: border-color 0.15s, background 0.15s;
+}
+.choice label:hover { border-color: var(--ink-faint); }
+.choice label.on { border-color: var(--green); background: var(--green-wash); }
+.choice label input { position: absolute; opacity: 0; pointer-events: none; }
+.choice label:focus-within { outline: 2px solid var(--green-ink); outline-offset: 2px; }
+.choice label b { display: block; font-size: 14.5px; font-weight: 600; }
+.choice label.on b { color: var(--green-ink); }
+.choice label span { display: block; font-size: 12.5px; color: var(--ink-faint); margin-top: 2px; }
+
+/* ---------- signature ---------- */
+
+/* The pad is a white card in both themes on purpose. You need to see the ink
+   while you draw, and the page it ends up on in Word is white regardless of
+   what theme the phone was in. What you see is what gets printed. */
+.padwrap {
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: #FFFFFF;
+  overflow: hidden;
+}
+.sigpad {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+  background: #FFFFFF;
+}
+.padfoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 10px;
+  margin-top: -26px;
+}
+/* The rule you sign on, the way a paper form has one. */
+.padfoot .baseline {
+  flex: 1;
+  height: 1px;
+  background: #D8D6CC;
+}
+.padfoot .btn {
+  color: #6E6F62;
+  position: relative;
+  z-index: 1;
+}
+.padfoot .btn:hover { background: #F1EFE7; color: #1D1D1B; }

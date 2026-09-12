@@ -10,12 +10,12 @@ export type User = {
   mentor: string | null;
   university: string | null;
   created_at: string;
-  is_demo: boolean;
 };
 
 export type Office = {
-  lat: number;
-  lng: number;
+  /** Null until somebody stands in the office and sets it. */
+  lat: number | null;
+  lng: number | null;
   radius_m: number;
   label: string;
 };

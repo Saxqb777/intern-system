@@ -59,6 +59,7 @@ export async function buildAttendanceSheet(input: SheetInput): Promise<Buffer> {
   );
   const days = weekdaysBetween(input.fromDate, input.toDate);
 
+  const initials = initialsOf(input.internName);
   const logo = await loadLogo();
   const header: Paragraph[] = [];
 
@@ -98,7 +99,12 @@ export async function buildAttendanceSheet(input: SheetInput): Promise<Buffer> {
 
   const table = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [headerRow(), ...days.map((day) => bodyRow(day, byDate.get(day), input.internshipStart, days))],
+    rows: [
+      headerRow(),
+      ...days.map((day) =>
+        bodyRow(day, byDate.get(day), input.internshipStart, days, initials)
+      ),
+    ],
   });
 
   const doc = new Document({
@@ -198,7 +204,8 @@ function bodyRow(
   day: string,
   row: SheetRow | undefined,
   internshipStart: string,
-  allDays: string[]
+  allDays: string[],
+  initials: string
 ): TableRow {
   const week = weekOf(day, internshipStart);
   // The paper sheet only writes the week number against its first row.
@@ -208,22 +215,14 @@ function bodyRow(
 
   let timeIn = "";
   let timeOut = "";
-  let signature = "";
 
   if (row?.status === "leave") {
     timeIn = "Approved leave";
-    signature = row.note ?? "";
   } else if (row?.status === "absent") {
     timeIn = "Absent";
-    signature = row.note ?? "";
   } else if (row) {
     timeIn = officeTime(row.time_in) ?? "";
     timeOut = officeTime(row.time_out) ?? "";
-    if (row.time_out) {
-      signature = row.signature
-        ? "Signed electronically"
-        : `Signed ${officeTime(row.time_out)}`;
-    }
   }
 
   return new TableRow({
@@ -233,9 +232,107 @@ function bodyRow(
       cell(sheetDate(day)),
       cell(timeIn, { center: true }),
       cell(timeOut, { center: true }),
-      cell(signature, { center: true, small: true }),
+      signatureCell(row, initials),
     ],
   });
+}
+
+/**
+ * What the intern actually drew, at the size a signature is written at, with
+ * their initials and the minute they signed underneath it.
+ *
+ * The drawing is the point. A cell reading "signed electronically" proves
+ * nothing to a university; a signature and a timestamp look like the paper
+ * form they already trust.
+ */
+function signatureCell(row: SheetRow | undefined, initials: string): TableCell {
+  const children: Paragraph[] = [];
+
+  if (row?.status === "leave") {
+    children.push(noteLine(row.note ?? "Approved leave"));
+  } else if (row?.status === "absent") {
+    children.push(noteLine(row.note ?? ""));
+  } else if (row?.signature && row.time_out) {
+    const drawn = decodeSignature(row.signature);
+    if (drawn) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 20, after: 0 },
+          children: [
+            new ImageRun({
+              data: drawn,
+              // A signature box on paper is roughly this size. Keeping the
+              // drawing's own 2.4:1 shape stops it looking stretched.
+              transformation: { width: 108, height: 45 },
+              type: "png",
+            }),
+          ],
+        })
+      );
+    }
+    children.push(stampLine(initials, officeTime(row.time_out)));
+  } else if (row?.time_out) {
+    // Signed off before drawn signatures existed.
+    children.push(stampLine(initials, officeTime(row.time_out)));
+  }
+
+  if (children.length === 0) children.push(new Paragraph({ text: "" }));
+
+  return new TableCell({
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 40, bottom: 40, left: 60, right: 60 },
+    borders: cellBorders(),
+    children,
+  });
+}
+
+/** "MB · 17:04", small, under the drawing. */
+function stampLine(initials: string, at: string | null): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 0, after: 20 },
+    children: [
+      new TextRun({ text: initials, bold: true, size: 15, color: INK }),
+      new TextRun({ text: at ? `  ${at}` : "", size: 15, color: GREY }),
+    ],
+  });
+}
+
+function noteLine(text: string): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [new TextRun({ text, size: 16, color: GREY, italics: true })],
+  });
+}
+
+/** The data URL the browser produced, back into PNG bytes. */
+function decodeSignature(dataUrl: string): Buffer | null {
+  const comma = dataUrl.indexOf(",");
+  if (comma === -1 || !dataUrl.startsWith("data:image/png;base64,")) return null;
+  try {
+    const bytes = Buffer.from(dataUrl.slice(comma + 1), "base64");
+    return bytes.length > 0 ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
+/** First and last initial, the way a signature block is initialled. */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function cellBorders() {
+  return {
+    top:    { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
+    bottom: { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
+    left:   { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
+    right:  { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
+  };
 }
 
 function cell(
@@ -245,12 +342,7 @@ function cell(
   return new TableCell({
     verticalAlign: VerticalAlign.CENTER,
     margins: { top: 60, bottom: 60, left: 110, right: 110 },
-    borders: {
-      top:    { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
-      bottom: { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
-      left:   { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
-      right:  { style: BorderStyle.SINGLE, size: 2, color: "D4D3C8" },
-    },
+    borders: cellBorders(),
     children: [
       new Paragraph({
         alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,

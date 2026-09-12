@@ -54,8 +54,8 @@ function useSave() {
 
 function OfficeForm({ office }: { office: Office }) {
   const { save, busy, error, saved, setError } = useSave();
-  const [lat, setLat] = useState(String(office.lat));
-  const [lng, setLng] = useState(String(office.lng));
+  const [lat, setLat] = useState(office.lat === null ? "" : String(office.lat));
+  const [lng, setLng] = useState(office.lng === null ? "" : String(office.lng));
   const [radius, setRadius] = useState(String(office.radius_m));
   const [label, setLabel] = useState(office.label);
   const [locating, setLocating] = useState(false);
@@ -93,19 +93,27 @@ function OfficeForm({ office }: { office: Office }) {
             Attendance only works inside this circle.
           </p>
         </div>
+        {office.lat === null && <span className="pill stop">not set</span>}
       </header>
       <div className="body stack">
         {error && <p className="note bad">{error}</p>}
         {saved && !error && <p className="note good">Saved.</p>}
 
-        <p className="note plain">
-          Stand anywhere in the office and press the button below. That is far
-          more accurate than dropping a pin on a map, and it takes two seconds.
-        </p>
+        {office.lat === null ? (
+          <p className="note warn">
+            Until this is set, nobody can sign in or out. Stand where you want
+            the centre of the circle and press the button.
+          </p>
+        ) : (
+          <p className="note plain">
+            Standing in the office and pressing the button beats dropping a pin
+            on a map. Press it again any time the office moves.
+          </p>
+        )}
 
         <div>
           <button className="btn" onClick={useHere} disabled={locating}>
-            {locating ? "Finding you" : "Use where I am standing now"}
+            {locating ? "Finding you" : office.lat === null ? "Set it to where I am now" : "Move it to where I am now"}
           </button>
         </div>
 

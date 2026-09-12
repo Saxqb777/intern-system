@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { isTestMode } from "@/lib/settings";
 import { TopBar } from "@/components/Chrome";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +14,9 @@ export default async function AppLayout({
   if (!user) redirect("/login");
   if (user.role === "pending") redirect("/pending");
 
-  const testMode = await isTestMode();
-
   return (
     <>
-      <TopBar name={user.name} role={user.role} testMode={testMode} />
+      <TopBar name={user.name} role={user.role} />
       <main className="shell">{children}</main>
     </>
   );

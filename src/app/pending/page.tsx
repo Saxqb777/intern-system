@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { currentUser, isStaff } from "@/lib/auth";
-import { sql } from "@/lib/db";
 import { SignOutButton } from "@/components/SignOutButton";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +9,6 @@ export default async function PendingPage() {
   if (!user) redirect("/login");
   if (user.role === "intern") redirect("/today");
   if (isStaff(user.role)) redirect("/admin");
-
-  const admins = (await sql`
-    select name from users where role in ('admin', 'superuser') order by name
-  `) as { name: string }[];
 
   return (
     <div className="authpage">
@@ -30,26 +25,12 @@ export default async function PendingPage() {
 
         <p className="lede small">
           Your account exists but it does not open anything yet. A supervisor
-          has to approve you and say whether you are an intern or an admin.
+          has to approve it and say whether you are an intern or a supervisor.
         </p>
 
         <p className="note plain" style={{ marginTop: 16 }}>
-          {admins.length ? (
-            <>
-              Ask{" "}
-              <b>
-                {admins.length === 1
-                  ? admins[0].name
-                  : admins.map((a) => a.name).join(", ")}
-              </b>{" "}
-              to approve <b>{user.email}</b>.
-            </>
-          ) : (
-            <>
-              Nobody can approve you yet, because no supervisor has been set up.
-              Whoever owns this system needs to create their account first.
-            </>
-          )}
+          Let your supervisor know you have signed up as{" "}
+          <b>{user.email}</b>. Sign in again once they tell you it is ready.
         </p>
 
         <div style={{ marginTop: 18 }}>

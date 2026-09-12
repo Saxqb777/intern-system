@@ -7,7 +7,7 @@ import { OwnerForm } from "./OwnerForm";
 export const dynamic = "force-dynamic";
 
 /**
- * The system owner's own door. Not linked from anywhere: you get here by
+ * An administrator's own door. Not linked from anywhere: you get here by
  * knowing the URL, and through it by knowing the setup code.
  *
  * Deliberately separate from /signup. Whoever runs this system is not
@@ -33,7 +33,7 @@ export default async function OwnerPage() {
 
       <div className="authcard">
         <div className="authhead">
-          <p className="eyebrow">System owner</p>
+          <p className="eyebrow">Administrator</p>
           <h1>{taken ? "Already set up" : "Set up this system"}</h1>
         </div>
 

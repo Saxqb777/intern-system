@@ -315,7 +315,7 @@ function EditRow({
                 id={`n${day}`}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Forgot to sign out, confirmed with Khalid"
+               
               />
             </div>
             <button className="btn solid" disabled={busy} onClick={save}>

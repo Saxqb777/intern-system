@@ -36,18 +36,24 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unknown role." }, { status: 400 });
     }
 
-    // Only the system owner can make another system owner.
+    // Only an administrator can make another administrator.
     if (role === "superuser" && staff.role !== "superuser") {
       return Response.json(
-        { error: "Only the system owner can make another system owner." },
+        { error: "Only an administrator can make another administrator." },
         { status: 403 }
       );
     }
 
+    // The mentor printed on the university sheet is a supervisor, never an
+    // administrator. Whoever runs this system is not the intern's mentor and
+    // their name has no business on an Agthia form.
+    const mentorName =
+      role === "intern" && staff.role === "admin" ? staff.name : null;
+
     await sql`
       update users
       set role = ${role}, approved_at = now(), approved_by = ${staff.id},
-          mentor = coalesce(mentor, ${role === "intern" ? staff.name : null})
+          mentor = coalesce(mentor, ${mentorName})
       where id = ${id}
     `;
 

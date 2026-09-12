@@ -30,11 +30,14 @@ export async function GET(request: Request) {
       return Response.json({ error: "You can only pull your own sheet." }, { status: 403 });
     }
 
+    // Falls back to a supervisor, never to whoever administers the system.
     const people = (await sql`
       select u.id, u.name, u.position, u.department,
-             coalesce(u.mentor, m.name) as mentor
+             coalesce(
+               u.mentor,
+               (select name from users where role = 'admin' order by name limit 1)
+             ) as mentor
       from users u
-      left join users m on m.id = u.approved_by
       where u.id = ${targetId}
     `) as {
       id: number;

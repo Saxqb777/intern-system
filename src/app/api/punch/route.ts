@@ -1,7 +1,7 @@
 import { sql } from "@/lib/db";
 import { asErrorResponse, requireUser } from "@/lib/auth";
 import { MAX_ACCURACY_M, metresBetween, parseFix } from "@/lib/geo";
-import { getSetting } from "@/lib/settings";
+import { getSetting, placedOffice } from "@/lib/settings";
 import { officeToday } from "@/lib/dates";
 
 type Body = {
@@ -13,10 +13,9 @@ type Body = {
 };
 
 /**
- * Sign in and sign out. The browser hands us a position, but the decision about
- * whether that position is inside the fence is made here and never in the
- * browser, because anything the browser decides can be edited by the person
- * being measured.
+ * Sign in and sign out. The browser hands us a position, but whether that
+ * position counts is decided here and never in the browser, because anything
+ * the browser decides can be edited by the person being measured.
  */
 export async function POST(request: Request) {
   try {
@@ -25,9 +24,13 @@ export async function POST(request: Request) {
 
     const action = body.action === "out" ? "out" : "in";
     const today = officeToday();
-    const test = await getSetting("test_mode");
-    const testMode = test.on;
-    const office = await getSetting("office");
+    const office = placedOffice(await getSetting("office"));
+
+    if (!office) {
+      return refuse(
+        "The office location has not been set yet, so attendance cannot be recorded. Your supervisor needs to do this once, standing in the building."
+      );
+    }
 
     const fix = parseFix({
       lat: body.lat,
@@ -35,42 +38,24 @@ export async function POST(request: Request) {
       accuracy: body.accuracy,
     });
 
-    // In test mode we skip the fence so the system can be demonstrated away
-    // from Al Foah. Everything else behaves exactly as it will when live.
-    let distance: number | null = null;
-
-    // Except when the owner has asked test mode to pretend they are out of
-    // range, so the refusal itself can be shown to someone without driving
-    // away from the building.
-    if (testMode && test.simulate_outside) {
+    if (!fix) {
       return refuse(
-        `You are 4.2 km from the office. Attendance only works inside ${office.radius_m} m of ${office.label}.`,
-        { distance: 4200, outside: true }
+        "We could not read your location. Turn location on for this site and try again."
+      );
+    }
+    if (fix.accuracy > MAX_ACCURACY_M) {
+      return refuse(
+        `Your phone is only sure of your position to within ${Math.round(fix.accuracy)} m, which is too rough to trust. Step outside or near a window and try again.`,
+        { accuracy: fix.accuracy }
       );
     }
 
-    if (!testMode) {
-      if (!fix) {
-        return refuse(
-          "We could not read your location. Turn location on for this site and try again."
-        );
-      }
-      if (fix.accuracy > MAX_ACCURACY_M) {
-        return refuse(
-          `Your phone is only sure of your position to within ${Math.round(fix.accuracy)} m, which is too rough to trust. Step outside or near a window and try again.`,
-          { accuracy: fix.accuracy }
-        );
-      }
-
-      distance = metresBetween(fix.lat, fix.lng, office.lat, office.lng);
-      if (distance > office.radius_m) {
-        return refuse(
-          `You are ${formatDistance(distance)} from the office. Attendance only works inside ${office.radius_m} m of ${office.label}.`,
-          { distance, outside: true }
-        );
-      }
-    } else if (fix) {
-      distance = metresBetween(fix.lat, fix.lng, office.lat, office.lng);
+    const distance = metresBetween(fix.lat, fix.lng, office.lat, office.lng);
+    if (distance > office.radius_m) {
+      return refuse(
+        `You are ${formatDistance(distance)} from ${office.label}. Attendance only works within ${office.radius_m} m.`,
+        { distance, outside: true }
+      );
     }
 
     const ip = clientIp(request);
@@ -89,11 +74,10 @@ export async function POST(request: Request) {
       await sql`
         insert into attendance (
           user_id, work_date, time_in,
-          in_lat, in_lng, in_accuracy, in_distance, in_ip, is_demo
+          in_lat, in_lng, in_accuracy, in_distance, in_ip
         ) values (
           ${user.id}, ${today}, ${now},
-          ${fix?.lat ?? null}, ${fix?.lng ?? null}, ${fix?.accuracy ?? null},
-          ${distance}, ${ip}, ${testMode}
+          ${fix.lat}, ${fix.lng}, ${fix.accuracy}, ${distance}, ${ip}
         )
         on conflict (user_id, work_date) do update set
           time_in     = excluded.time_in,
@@ -119,19 +103,23 @@ export async function POST(request: Request) {
     }
 
     const signature =
-      typeof body.signature === "string" && body.signature.startsWith("data:image/")
-        ? body.signature.slice(0, 200_000)
+      typeof body.signature === "string" && body.signature.startsWith("data:image/png")
+        ? body.signature.slice(0, 400_000)
         : null;
+
+    if (!signature) {
+      return refuse("Please sign in the box before you sign out.");
+    }
 
     await sql`
       update attendance set
         time_out     = ${now},
-        out_lat      = ${fix?.lat ?? null},
-        out_lng      = ${fix?.lng ?? null},
-        out_accuracy = ${fix?.accuracy ?? null},
+        out_lat      = ${fix.lat},
+        out_lng      = ${fix.lng},
+        out_accuracy = ${fix.accuracy},
         out_distance = ${distance},
         out_ip       = ${ip},
-        signature    = coalesce(${signature}, signature)
+        signature    = ${signature}
       where id = ${existing[0].id}
     `;
 

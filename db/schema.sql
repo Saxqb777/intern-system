@@ -15,7 +15,6 @@ create table if not exists users (
   created_at    timestamptz not null default now(),
   approved_at   timestamptz,
   approved_by   integer references users(id) on delete set null,
-  is_demo       boolean not null default false
 );
 
 create index if not exists users_role_idx on users(role);
@@ -51,7 +50,6 @@ create table if not exists attendance (
   edited_by    integer references users(id) on delete set null,
   edited_at    timestamptz,
   note         text,
-  is_demo      boolean not null default false,
   unique (user_id, work_date)
 );
 
@@ -73,7 +71,6 @@ create table if not exists override_requests (
   decided_by  integer references users(id) on delete set null,
   decided_at  timestamptz,
   created_at  timestamptz not null default now(),
-  is_demo     boolean not null default false
 );
 
 create index if not exists override_status_idx on override_requests(status);
@@ -84,7 +81,6 @@ create table if not exists work_logs (
   work_date  date not null,
   body       text not null,
   updated_at timestamptz not null default now(),
-  is_demo    boolean not null default false,
   unique (user_id, work_date)
 );
 
@@ -98,7 +94,6 @@ create table if not exists tasks (
   created_by integer references users(id) on delete set null,
   created_at timestamptz not null default now(),
   done_at    timestamptz,
-  is_demo    boolean not null default false
 );
 
 create index if not exists tasks_user_idx on tasks(user_id, done);
@@ -114,7 +109,6 @@ create table if not exists leave_requests (
   decided_by integer references users(id) on delete set null,
   decided_at timestamptz,
   created_at timestamptz not null default now(),
-  is_demo    boolean not null default false
 );
 
 create index if not exists leave_status_idx on leave_requests(status);
@@ -124,13 +118,12 @@ create table if not exists settings (
   value jsonb not null
 );
 
--- Defaults. Every one of these is editable from inside the app, so the
--- coordinates below are only a starting point: the supervisor overwrites
--- them by standing in the office and pressing "use where I am now".
+-- The office has no coordinates until somebody stands in it and presses the
+-- button in Settings. A guessed fence refuses the people who are actually at
+-- work, so the system says so plainly instead of guessing.
 insert into settings (key, value) values
-  ('office',     '{"lat":24.1302,"lng":55.8023,"radius_m":200,"label":"Agthia Al Foah, Al Ain"}'),
+  ('office',     '{"lat":null,"lng":null,"radius_m":200,"label":"the office"}'),
   ('hours',      '{"start":"09:00","end":"17:00"}'),
   ('internship', '{"start_date":"2026-09-07","end_date":"2026-12-04"}'),
-  ('test_mode',  '{"on":true}'),
   ('domains',    '["agthia.com","agthia.ae","alfoah.com"]')
 on conflict (key) do nothing;

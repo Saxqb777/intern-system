@@ -1,7 +1,7 @@
 import { sql } from "@/lib/db";
 import { asErrorResponse, requireUser } from "@/lib/auth";
 import { metresBetween, parseFix } from "@/lib/geo";
-import { getSetting } from "@/lib/settings";
+import { getSetting, placedOffice } from "@/lib/settings";
 import { officeToday } from "@/lib/dates";
 
 /**
@@ -24,15 +24,16 @@ export async function POST(request: Request) {
 
     const kind = body.kind === "out" ? "out" : "in";
     const today = officeToday();
-    const office = await getSetting("office");
+    const office = placedOffice(await getSetting("office"));
     const fix = parseFix({
       lat: body.lat,
       lng: body.lng,
       accuracy: body.accuracy,
     });
-    const distance = fix
-      ? metresBetween(fix.lat, fix.lng, office.lat, office.lng)
-      : null;
+    const distance =
+      fix && office
+        ? metresBetween(fix.lat, fix.lng, office.lat, office.lng)
+        : null;
 
     const already = (await sql`
       select id from override_requests

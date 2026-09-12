@@ -45,7 +45,7 @@ export default async function LeavePage() {
             <h2>Your requests</h2>
           </header>
           {requests.length === 0 ? (
-            <p className="empty">You have not asked for any days off.</p>
+            <p className="empty">No days off requested.</p>
           ) : (
             <div className="divide">
               {requests.map((req) => (

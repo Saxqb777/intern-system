@@ -14,7 +14,7 @@ import { getSetting } from "@/lib/settings";
  * Staff (/signup) have to be on an Agthia domain, and land as "pending" with
  * no access until a supervisor gives them a role. They never choose their own.
  *
- * The system owner (/owner) comes through with the setup code instead. That
+ * An administrator (/owner) comes through with the setup code instead. That
  * code is a stronger gate than an email domain, so the domain check does not
  * apply: whoever runs this system is not necessarily an Agthia employee. It
  * only works while nobody owns the system, so it cannot be reused later to
