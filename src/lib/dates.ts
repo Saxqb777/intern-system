@@ -101,6 +101,26 @@ export function isWeekday(iso: string): boolean {
   return day >= 1 && day <= 5; // Monday to Friday, the UAE working week
 }
 
+/**
+ * The days a sheet should show: every Monday to Friday in the range, plus any
+ * other date somebody actually has a record on.
+ *
+ * The university's form only has Monday-to-Friday rows, so that is the
+ * skeleton. But an intern who came in on a Saturday has a real punch, and a
+ * sheet that silently drops it is worse than one that shows an extra row.
+ */
+export function sheetDays(
+  fromIso: string,
+  toIso: string,
+  recorded: Iterable<string>
+): string[] {
+  const days = new Set(weekdaysBetween(fromIso, toIso));
+  for (const day of recorded) {
+    if (day >= fromIso && day <= toIso) days.add(day);
+  }
+  return [...days].sort();
+}
+
 /** Every Monday-to-Friday date in a range, inclusive, in order. */
 export function weekdaysBetween(fromIso: string, toIso: string): string[] {
   const out: string[] = [];

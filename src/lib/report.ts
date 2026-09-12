@@ -21,7 +21,7 @@ import {
   officeTime,
   sheetDate,
   weekOf,
-  weekdaysBetween,
+  sheetDays,
 } from "@/lib/dates";
 
 export type SheetRow = {
@@ -57,7 +57,7 @@ export async function buildAttendanceSheet(input: SheetInput): Promise<Buffer> {
   const byDate = new Map(
     input.rows.map((row) => [dayOf(row.work_date), row])
   );
-  const days = weekdaysBetween(input.fromDate, input.toDate);
+  const days = sheetDays(input.fromDate, input.toDate, byDate.keys());
 
   const initials = initialsOf(input.internName);
   const logo = await loadLogo();

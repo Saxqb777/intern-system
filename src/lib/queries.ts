@@ -88,6 +88,8 @@ export async function summariesFor(
 
   const today = officeToday();
   const cappedTo = toDate < today ? toDate : today;
+  // Monday to Friday is what the placement is measured against, but hours are
+  // counted from whatever was actually recorded, weekend shifts included.
   const expected = weekdaysBetween(fromDate, cappedTo);
 
   const [lateH, lateM] = dayStart.split(":").map(Number);
@@ -104,14 +106,18 @@ export async function summariesFor(
   }
 
   for (const userId of userIds) {
-    const days = byUser.get(userId) ?? new Map();
+    const days: Map<string, (typeof rows)[number]> =
+      byUser.get(userId) ?? new Map();
     let worked = 0;
     let leave = 0;
     let absent = 0;
     let minutes = 0;
     let late = 0;
 
-    for (const day of expected) {
+    // Every expected day, plus any extra day with a record on it.
+    const counted = [...new Set([...expected, ...days.keys()])].sort();
+
+    for (const day of counted) {
       const row = days.get(day);
       if (!row || (row.status !== "leave" && !row.time_in)) {
         if (row?.status === "leave") leave++;

@@ -9,7 +9,7 @@ import {
   minutesBetween,
   officeTime,
   sheetDate,
-  weekdaysBetween,
+  sheetDays,
 } from "@/lib/dates";
 
 type Row = {
@@ -54,7 +54,7 @@ export function SheetView({
   }
 
   const byDate = new Map(rows.map((r) => [dayOf(r.work_date), r]));
-  const days = weekdaysBetween(from, to);
+  const days = sheetDays(from, to, byDate.keys());
   const reportUrl = `/api/report?intern=${selectedId}&from=${from}&to=${to}`;
 
   return (

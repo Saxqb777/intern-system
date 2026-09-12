@@ -10,6 +10,7 @@ import {
   officeTime,
   officeToday,
   sheetDate,
+  sheetDays,
   weekOf,
   weekdaysBetween,
 } from "../src/lib/dates.ts";
@@ -118,4 +119,43 @@ test("a timestamp keeps the day it happened on", () => {
 test("a missing date does not throw", () => {
   assert.equal(dayOf(null), "");
   assert.equal(dayOf(undefined), "");
+});
+
+// A Saturday shift is real. The university's form has no Saturday row, so the
+// sheet grows one rather than dropping the punch. This was live for a day and
+// a real test punch vanished into it.
+test("a sheet shows recorded days the working week does not cover", () => {
+  // Sep 7 is a Monday, Sep 12 a Saturday.
+  assert.deepEqual(sheetDays("2026-09-07", "2026-09-13", []), [
+    "2026-09-07",
+    "2026-09-08",
+    "2026-09-09",
+    "2026-09-10",
+    "2026-09-11",
+  ]);
+
+  assert.deepEqual(sheetDays("2026-09-07", "2026-09-13", ["2026-09-12"]), [
+    "2026-09-07",
+    "2026-09-08",
+    "2026-09-09",
+    "2026-09-10",
+    "2026-09-11",
+    "2026-09-12",
+  ]);
+});
+
+test("a recorded day is never listed twice", () => {
+  const days = sheetDays("2026-09-07", "2026-09-11", [
+    "2026-09-08",
+    "2026-09-08",
+  ]);
+  assert.equal(days.length, 5);
+  assert.equal(new Set(days).size, 5);
+});
+
+test("records outside the range asked for stay out of it", () => {
+  assert.deepEqual(
+    sheetDays("2026-09-07", "2026-09-08", ["2026-08-30", "2026-12-25"]),
+    ["2026-09-07", "2026-09-08"]
+  );
 });
