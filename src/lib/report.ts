@@ -29,7 +29,10 @@ export type SheetRow = {
   time_in: string | null;
   time_out: string | null;
   status: string;
+  /** The supervisor's drawing, not the intern's. */
   signature: string | null;
+  signed_by_name: string | null;
+  signed_at: string | null;
   note: string | null;
 };
 
@@ -127,7 +130,7 @@ export async function buildAttendanceSheet(input: SheetInput): Promise<Buffer> {
             spacing: { before: 240 },
             children: [
               new TextRun({
-                text: `Generated ${sheetDate(todayIso())} from the Al Foah attendance system. Times are recorded at sign in and sign out inside the office.`,
+                text: `Generated ${sheetDate(todayIso())} from the Al Foah attendance system. Times are recorded when the intern signs in and out inside the office. Each signature is the supervisor\u2019s, added from their own account, with their initials and the time they signed.`,
                 size: 16,
                 color: GREY,
                 italics: true,
@@ -254,6 +257,7 @@ function signatureCell(row: SheetRow | undefined, initials: string): TableCell {
     children.push(noteLine(row.note ?? ""));
   } else if (row?.signature && row.time_out) {
     const drawn = decodeSignature(row.signature);
+    const by = row.signed_by_name ? initialsOf(row.signed_by_name) : initials;
     if (drawn) {
       children.push(
         new Paragraph({
@@ -271,10 +275,10 @@ function signatureCell(row: SheetRow | undefined, initials: string): TableCell {
         })
       );
     }
-    children.push(stampLine(initials, officeTime(row.time_out)));
+    children.push(stampLine(by, officeTime(row.signed_at)));
   } else if (row?.time_out) {
-    // Signed off before drawn signatures existed.
-    children.push(stampLine(initials, officeTime(row.time_out)));
+    // Signed out but not yet certified by a supervisor.
+    children.push(noteLine("Awaiting signature"));
   }
 
   if (children.length === 0) children.push(new Paragraph({ text: "" }));

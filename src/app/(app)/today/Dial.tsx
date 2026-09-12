@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Leaf } from "@/components/Leaf";
-import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
 import { metresBetween } from "@/lib/geo";
 import { humanMinutes, minutesBetween, officeTime } from "@/lib/dates";
 
@@ -46,7 +45,6 @@ export function Dial(props: Props) {
 
   const signOutDialog = useRef<HTMLDialogElement>(null);
   const overrideDialog = useRef<HTMLDialogElement>(null);
-  const padRef = useRef<SignaturePadHandle>(null);
 
   const state: "out" | "in" | "done" = props.timeOut
     ? "done"
@@ -117,7 +115,7 @@ export function Dial(props: Props) {
   const canPunch = placed && state !== "done" && geo.kind === "found";
 
   const send = useCallback(
-    async (action: "in" | "out", signature?: string) => {
+    async (action: "in" | "out") => {
       setBusy(true);
       setError(null);
 
@@ -130,7 +128,6 @@ export function Dial(props: Props) {
           lat: fix?.lat,
           lng: fix?.lng,
           accuracy: fix?.accuracy,
-          signature,
         }),
       });
       const body = (await res.json()) as { error?: string };
@@ -157,12 +154,7 @@ export function Dial(props: Props) {
   }
 
   async function confirmSignOut() {
-    const signature = padRef.current?.toDataUrl() ?? undefined;
-    if (!signature) {
-      setError("Please sign in the box before you sign out.");
-      return;
-    }
-    const ok = await send("out", signature);
+    const ok = await send("out");
     if (ok) signOutDialog.current?.close();
   }
 
@@ -239,6 +231,14 @@ export function Dial(props: Props) {
         </div>
       </dl>
 
+      {state === "done" && (
+        <p className={props.hasSignature ? "note good" : "note plain"}>
+          {props.hasSignature
+            ? "Signed off by your supervisor."
+            : "Waiting for your supervisor to sign this day off."}
+        </p>
+      )}
+
       <p className="small faint" style={{ textAlign: "center" }}>
         Your day runs {props.startsAt} to {props.endsAt}.
       </p>
@@ -248,16 +248,14 @@ export function Dial(props: Props) {
         <div className="inner">
           <div>
             <p className="eyebrow">
-              {signOutAt ? `Signing out at ${signOutAt}` : "End of day"}
+              {signOutAt ? `It is ${signOutAt}` : "End of day"}
             </p>
-            <h2>Sign the day off</h2>
+            <h2>Finish for today?</h2>
           </div>
           <p className="lede small">
-            Draw your signature the way you would on the paper sheet. It goes
-            straight onto the form your university sees.
+            Your hours are recorded now. Your supervisor signs the day off from
+            their own account, which is what the university sees on the sheet.
           </p>
-
-          <SignaturePad ref={padRef} />
 
           <div className="row" style={{ justifyContent: "flex-end" }}>
             <button

@@ -39,8 +39,12 @@ create table if not exists attendance (
   out_distance double precision,
   out_ip       text,
 
-  -- data URL of the signature drawn at sign out
+  -- The supervisor's signature, drawn in their own account after the intern
+  -- has signed out. Interns do not sign their own attendance: a record the
+  -- measured person certifies is not worth much to a university.
   signature    text,
+  signed_by    integer references users(id) on delete set null,
+  signed_at    timestamptz,
   -- present | leave | absent | edited
   status       text not null default 'present',
   -- set when an admin allowed a punch from outside the fence

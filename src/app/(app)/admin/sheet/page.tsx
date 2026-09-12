@@ -57,11 +57,15 @@ export default async function SheetPage({
   const to = valid(params.to) ?? internship.end_date;
 
   const rows = (await sql`
-    select work_date, time_in, time_out, status, note, signature is not null as signed,
-           in_distance, out_distance, in_override, out_override, edited_by
-    from attendance
-    where user_id = ${selected.id} and work_date between ${from} and ${to}
-    order by work_date
+    select a.work_date, a.time_in, a.time_out, a.status, a.note,
+           a.signature is not null as signed, a.signed_at,
+           s.name as signed_by_name,
+           a.in_distance, a.out_distance, a.in_override, a.out_override,
+           a.edited_by
+    from attendance a
+    left join users s on s.id = a.signed_by
+    where a.user_id = ${selected.id} and a.work_date between ${from} and ${to}
+    order by a.work_date
   `) as {
     work_date: string;
     time_in: string | null;
@@ -69,6 +73,8 @@ export default async function SheetPage({
     status: string;
     note: string | null;
     signed: boolean;
+    signed_at: string | null;
+    signed_by_name: string | null;
     in_distance: number | null;
     out_distance: number | null;
     in_override: boolean;
@@ -111,6 +117,8 @@ export default async function SheetPage({
         </section>
 
         <SheetView
+          canSign={user.role === "admin" || user.role === "superuser"}
+          internName={selected.name}
           interns={interns}
           selectedId={selected.id}
           from={from}

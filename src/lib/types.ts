@@ -35,6 +35,8 @@ export type AttendanceRow = {
   in_accuracy: number | null;
   out_accuracy: number | null;
   signature: string | null;
+  signed_by: number | null;
+  signed_at: string | null;
   status: "present" | "leave" | "absent" | "edited";
   in_override: boolean;
   out_override: boolean;

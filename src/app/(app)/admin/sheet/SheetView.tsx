@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
 import {
   dayOf,
   dayShort,
@@ -9,6 +10,7 @@ import {
   minutesBetween,
   officeTime,
   sheetDate,
+  niceDate,
   sheetDays,
 } from "@/lib/dates";
 
@@ -19,6 +21,8 @@ type Row = {
   status: string;
   note: string | null;
   signed: boolean;
+  signed_at: string | null;
+  signed_by_name: string | null;
   in_distance: number | null;
   out_distance: number | null;
   in_override: boolean;
@@ -27,6 +31,8 @@ type Row = {
 };
 
 export function SheetView({
+  canSign,
+  internName,
   interns,
   selectedId,
   from,
@@ -35,6 +41,8 @@ export function SheetView({
   dayMinutes,
   today,
 }: {
+  canSign: boolean;
+  internName: string;
   interns: { id: number; name: string }[];
   selectedId: number;
   from: string;
@@ -57,8 +65,22 @@ export function SheetView({
   const days = sheetDays(from, to, byDate.keys());
   const reportUrl = `/api/report?intern=${selectedId}&from=${from}&to=${to}`;
 
+  const unsigned = days
+    .map((day) => byDate.get(day))
+    .filter((row): row is Row => Boolean(row?.time_out && !row.signed))
+    .map((row) => dayOf(row.work_date));
+
   return (
     <>
+      {canSign && unsigned.length > 0 && (
+        <SignOffPanel
+          internId={selectedId}
+          internName={internName}
+          dates={unsigned}
+          onDone={() => router.refresh()}
+        />
+      )}
+
       <section className="panel">
         <header>
           <div className="row">
@@ -175,9 +197,13 @@ export function SheetView({
                     </td>
                     <td className="dim">
                       {row?.signed ? (
-                        <span style={{ color: "var(--green-ink)" }}>Signed</span>
+                        <span style={{ color: "var(--green-ink)" }}>
+                          {row.signed_by_name ?? "Signed"}
+                        </span>
                       ) : row?.time_out ? (
-                        `Signed ${officeTime(row.time_out)}`
+                        <span style={{ color: "var(--amber-ink)" }}>
+                          Awaiting signature
+                        </span>
                       ) : (
                         dash(future)
                       )}
@@ -328,5 +354,118 @@ function EditRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+/**
+ * A supervisor certifying days from their own account.
+ *
+ * They draw once and choose which days it covers. Every outstanding day is
+ * ticked to begin with, because signing off a week at a time is the normal
+ * case and re-drawing the same signature five times is not more truthful
+ * than drawing it once on purpose.
+ */
+function SignOffPanel({
+  internId,
+  internName,
+  dates,
+  onDone,
+}: {
+  internId: number;
+  internName: string;
+  dates: string[];
+  onDone: () => void;
+}) {
+  const padRef = useRef<SignaturePadHandle>(null);
+  const [chosen, setChosen] = useState<string[]>(dates);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle(day: string) {
+    setChosen((current) =>
+      current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day].sort()
+    );
+  }
+
+  async function submit() {
+    const signature = padRef.current?.toDataUrl();
+    if (!signature) {
+      setError("Draw your signature in the box first.");
+      return;
+    }
+    if (chosen.length === 0) {
+      setError("Tick at least one day.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/admin/sign", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userId: internId, dates: chosen, signature }),
+    });
+    setBusy(false);
+
+    if (!res.ok) {
+      const body = (await res.json()) as { error?: string };
+      setError(body.error ?? "Could not save that.");
+      return;
+    }
+    padRef.current?.clear();
+    onDone();
+  }
+
+  return (
+    <section className="panel signoff">
+      <header>
+        <div>
+          <h2>
+            {dates.length} {dates.length === 1 ? "day" : "days"} need your
+            signature
+          </h2>
+          <p className="small faint">
+            {internName} has signed out of these. Nothing reaches the sheet
+            until you certify them.
+          </p>
+        </div>
+      </header>
+
+      <div className="body stack">
+        {error && <p className="note bad">{error}</p>}
+
+        <div className="daypicks">
+          {dates.map((day) => (
+            <label key={day} className={chosen.includes(day) ? "on" : undefined}>
+              <input
+                type="checkbox"
+                checked={chosen.includes(day)}
+                onChange={() => toggle(day)}
+              />
+              <b>{dayShort(day)}</b>
+              <span>{niceDate(day)}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="field">
+          <label htmlFor="signoff-pad">Your signature</label>
+          <SignaturePad ref={padRef} />
+        </div>
+
+        <div className="spread">
+          <span className="small faint">
+            {chosen.length} of {dates.length} ticked
+          </span>
+          <button className="btn solid" onClick={submit} disabled={busy}>
+            {busy
+              ? "Signing"
+              : `Sign ${chosen.length} ${chosen.length === 1 ? "day" : "days"}`}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

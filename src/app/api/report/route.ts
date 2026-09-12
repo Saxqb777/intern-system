@@ -53,10 +53,12 @@ export async function GET(request: Request) {
     const person = people[0];
 
     const rows = (await sql`
-      select work_date, time_in, time_out, status, signature, note
-      from attendance
-      where user_id = ${targetId} and work_date between ${from} and ${to}
-      order by work_date
+      select a.work_date, a.time_in, a.time_out, a.status, a.signature,
+             a.signed_at, s.name as signed_by_name, a.note
+      from attendance a
+      left join users s on s.id = a.signed_by
+      where a.user_id = ${targetId} and a.work_date between ${from} and ${to}
+      order by a.work_date
     `) as SheetRow[];
 
     const file = await buildAttendanceSheet({

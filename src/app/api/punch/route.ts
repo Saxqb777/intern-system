@@ -9,7 +9,6 @@ type Body = {
   lat?: unknown;
   lng?: unknown;
   accuracy?: unknown;
-  signature?: unknown;
 };
 
 /**
@@ -102,15 +101,8 @@ export async function POST(request: Request) {
       return refuse("You already signed out today.");
     }
 
-    const signature =
-      typeof body.signature === "string" && body.signature.startsWith("data:image/png")
-        ? body.signature.slice(0, 400_000)
-        : null;
-
-    if (!signature) {
-      return refuse("Please sign in the box before you sign out.");
-    }
-
+    // No signature here on purpose. The supervisor certifies the day from
+    // their own account; an intern signing off their own hours proves nothing.
     await sql`
       update attendance set
         time_out     = ${now},
@@ -118,8 +110,7 @@ export async function POST(request: Request) {
         out_lng      = ${fix.lng},
         out_accuracy = ${fix.accuracy},
         out_distance = ${distance},
-        out_ip       = ${ip},
-        signature    = ${signature}
+        out_ip       = ${ip}
       where id = ${existing[0].id}
     `;
 

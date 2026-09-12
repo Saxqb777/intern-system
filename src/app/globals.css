@@ -649,3 +649,40 @@ dialog.sheet .inner { padding: 22px; display: flex; flex-direction: column; gap:
   z-index: 1;
 }
 .padfoot .btn:hover { background: #F1EFE7; color: #1D1D1B; }
+
+
+/* ---------- supervisor sign off ---------- */
+
+/* Lifted above the table because it is a job, not a record. The amber edge
+   matches every other thing in the app that is waiting on a person. */
+.signoff { border-color: var(--amber); }
+.signoff > header { background: var(--amber-wash); border-bottom-color: var(--amber); }
+.signoff > header h2 { color: var(--amber-ink); }
+
+/* One chip per outstanding day. Ticked by default: signing off a week at a
+   time is the normal case, so the common path needs no clicks. */
+.daypicks { display: flex; flex-wrap: wrap; gap: 8px; }
+.daypicks label {
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: var(--surface);
+  line-height: 1.25;
+  min-width: 104px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.daypicks label:hover { border-color: var(--ink-faint); }
+.daypicks label.on { border-color: var(--green); background: var(--green-wash); }
+.daypicks label:focus-within { outline: 2px solid var(--green-ink); outline-offset: 2px; }
+.daypicks label input { position: absolute; opacity: 0; pointer-events: none; }
+.daypicks label b {
+  display: block;
+  font-family: var(--data);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.daypicks label.on b { color: var(--green-ink); }
+.daypicks label span { display: block; font-size: 13px; font-weight: 500; }
