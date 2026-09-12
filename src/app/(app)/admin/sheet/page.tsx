@@ -5,6 +5,8 @@ import { getSetting, workdayMinutes } from "@/lib/settings";
 import { summaryFor } from "@/lib/queries";
 import { humanMinutes, officeToday } from "@/lib/dates";
 import { SheetView } from "./SheetView";
+import { InternWork, type WorkLogEntry } from "./InternWork";
+import type { TaskItem } from "@/components/TaskList";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +87,23 @@ export default async function SheetPage({
   const summary = await summaryFor(selected.id, from, to, hours.start);
   const dayMinutes = workdayMinutes(hours);
 
+  // The person who signs the sheet should be able to read what the intern
+  // wrote, and hand them work. Both existed only on the intern's own screen.
+  const [logs, tasks] = await Promise.all([
+    sql`
+      select work_date, body, updated_at from work_logs
+      where user_id = ${selected.id} and work_date between ${from} and ${to}
+      order by work_date desc
+    ` as Promise<unknown>,
+    sql`
+      select t.id, t.title, t.detail, t.done, t.due_date, u.name as from_name
+      from tasks t
+      left join users u on u.id = t.created_by
+      where t.user_id = ${selected.id}
+      order by t.done asc, t.due_date asc nulls last, t.id desc
+    ` as Promise<unknown>,
+  ]);
+
   return (
     <>
       <header className="pagehead">
@@ -115,6 +134,13 @@ export default async function SheetPage({
           <Stat label="Leave" value={String(summary.leave_days)} />
           <Stat label="Unexplained" value={String(summary.absent_days)} tone={summary.absent_days > 0 ? "warn" : undefined} />
         </section>
+
+        <InternWork
+          internId={selected.id}
+          internName={selected.name}
+          logs={logs as WorkLogEntry[]}
+          tasks={tasks as TaskItem[]}
+        />
 
         <SheetView
           canSign={user.role === "admin" || user.role === "superuser"}

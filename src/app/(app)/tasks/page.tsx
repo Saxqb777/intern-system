@@ -37,7 +37,7 @@ export default async function TasksPage() {
         </p>
         <h1>Tasks</h1>
         <p className="lede" style={{ marginTop: 6 }}>
-          Yours, and your supervisor&rsquo;s.
+          Yours, and anything your supervisor has given you.
         </p>
       </header>
 

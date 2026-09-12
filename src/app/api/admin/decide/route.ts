@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     if (kind === "override") {
       const rows = (await sql`
-        select user_id, work_date, kind, lat, lng, accuracy, distance
+        select user_id, work_date, kind, lat, lng, accuracy, distance, created_at
         from override_requests
         where id = ${id} and status = 'pending'
       `) as {
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
         lng: number | null;
         accuracy: number | null;
         distance: number | null;
+        created_at: string;
       }[];
 
       if (!rows.length) {
@@ -42,7 +43,11 @@ export async function POST(request: Request) {
       }
       const req = rows[0];
       const date = dayOf(req.work_date);
-      const now = new Date().toISOString();
+
+      // The time that goes on the sheet is when the intern asked, not when
+      // the supervisor got round to approving it. Approving at 11:30 a request
+      // made at 08:54 used to cost the intern two and a half hours.
+      const asked = req.created_at;
 
       if (approve) {
         if (req.kind === "in") {
@@ -51,7 +56,7 @@ export async function POST(request: Request) {
               user_id, work_date, time_in, in_lat, in_lng, in_accuracy,
               in_distance, in_override, status
             ) values (
-              ${req.user_id}, ${date}, ${now}, ${req.lat}, ${req.lng},
+              ${req.user_id}, ${date}, ${asked}, ${req.lat}, ${req.lng},
               ${req.accuracy}, ${req.distance}, true, 'present'
             )
             on conflict (user_id, work_date) do update set
@@ -61,7 +66,7 @@ export async function POST(request: Request) {
         } else {
           await sql`
             update attendance set
-              time_out = coalesce(time_out, ${now}),
+              time_out = coalesce(time_out, ${asked}),
               out_lat = ${req.lat}, out_lng = ${req.lng},
               out_accuracy = ${req.accuracy}, out_distance = ${req.distance},
               out_override = true

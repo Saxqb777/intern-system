@@ -686,3 +686,33 @@ dialog.sheet .inner { padding: 22px; display: flex; flex-direction: column; gap:
 }
 .daypicks label.on b { color: var(--green-ink); }
 .daypicks label span { display: block; font-size: 13px; font-weight: 500; }
+
+
+/* ---------- disclosure ---------- */
+
+/* Two quiet buttons rather than two more panels. On the attendance page the
+   record is the job; the log and the task list are context you open when you
+   want them. */
+.disclose {
+  font-family: var(--body);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 10px 15px;
+  cursor: pointer;
+  line-height: 1.3;
+  color: var(--ink);
+  transition: border-color 0.15s, background 0.15s;
+}
+.disclose:hover { border-color: var(--ink-faint); }
+.disclose.on { border-color: var(--green); background: var(--green-wash); }
+.disclose b { display: block; font-size: 14px; font-weight: 600; }
+.disclose.on b { color: var(--green-ink); }
+.disclose span {
+  display: block;
+  font-family: var(--data);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin-top: 1px;
+}
